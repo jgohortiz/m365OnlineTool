@@ -1,0 +1,34 @@
+{
+  "name": "m365OnlineTool",
+  "version": "1.0.0",
+  "description": "Gestión de cuentas Microsoft 365 - Plan A1",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "dev": "electron . --dev"
+  },
+  "build": {
+    "appId": "com.m365onlinetool.app",
+    "productName": "m365OnlineTool",
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "dependencies": {
+    "@azure/msal-node": "^2.6.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "node-fetch": "^2.7.0",
+    "isomorphic-fetch": "^3.0.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

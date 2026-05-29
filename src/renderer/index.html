@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>m365OnlineTool</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;600;700&display=swap');
+
+:root {
+  --ms-blue:        #0078d4;
+  --ms-blue-dark:   #106ebe;
+  --ms-blue-darker: #005a9e;
+  --ms-blue-light:  #deecf9;
+  --white:          #ffffff;
+  --gray-2:         #faf9f8;
+  --gray-4:         #f3f2f1;
+  --gray-6:         #edebe9;
+  --gray-10:        #e1dfdd;
+  --gray-20:        #c8c6c4;
+  --gray-30:        #b3b0ad;
+  --gray-60:        #605e5c;
+  --gray-80:        #3b3a39;
+  --gray-90:        #201f1e;
+  --success:        #107c10;
+  --success-bg:     #dff6dd;
+  --error:          #a4262c;
+  --error-bg:       #fde7e9;
+  --warning-bg:     #fff4ce;
+  --info-bg:        #deecf9;
+  --nav-bg:         #f3f2f1;
+  --nav-width:      228px;
+  --font: 'Segoe UI', system-ui, sans-serif;
+  --shadow-4:  0 1.6px 3.6px rgba(0,0,0,.13), 0 0.3px 0.9px rgba(0,0,0,.1);
+  --shadow-16: 0 6.4px 14.4px rgba(0,0,0,.13), 0 1.2px 3.6px rgba(0,0,0,.1);
+  --radius: 4px; --radius-sm: 2px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font); font-size: 14px; line-height: 1.4;
+  color: var(--gray-90); background: var(--white);
+  height: 100vh; display: flex; flex-direction: column;
+  overflow: hidden; -webkit-font-smoothing: antialiased;
+}
+
+/* ── Titlebar ── */
+#titlebar {
+  height: 40px; background: var(--ms-blue);
+  display: flex; align-items: center; padding: 0 0 0 12px;
+  -webkit-app-region: drag; flex-shrink: 0; gap: 0;
+}
+.tb-icon { width: 20px; height: 20px; background: white; display: flex; align-items: center; justify-content: center; border-radius: 3px; flex-shrink: 0; margin-right: 10px; }
+.tb-icon svg { width: 12px; height: 12px; }
+.tb-title { font-size: 12px; font-weight: 400; color: white; opacity: .95; }
+.tb-spacer { flex: 1; }
+.tb-controls { display: flex; -webkit-app-region: no-drag; height: 40px; }
+.tb-btn { width: 46px; height: 40px; border: none; background: transparent; color: white; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; transition: background .1s; }
+.tb-btn:hover { background: rgba(255,255,255,.18); }
+.tb-btn.close:hover { background: #c42b1c; }
+.tb-btn svg { width: 10px; height: 10px; }
+
+/* ── Shell ── */
+#shell { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Nav ── */
+#nav { width: var(--nav-width); background: var(--nav-bg); border-right: 1px solid var(--gray-10); display: flex; flex-direction: column; flex-shrink: 0; padding: 4px 0; }
+.nav-header { padding: 14px 16px 6px; font-size: 11px; font-weight: 600; color: var(--gray-60); text-transform: uppercase; letter-spacing: 0.8px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 13.5px; color: var(--gray-90); cursor: pointer; border-left: 2px solid transparent; transition: background .08s; }
+.nav-item:hover { background: var(--gray-6); }
+.nav-item.active { background: var(--ms-blue-light); border-left-color: var(--ms-blue); color: var(--ms-blue-darker); font-weight: 600; }
+.nav-item .nav-icon { width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.nav-item .nav-icon svg { width: 16px; height: 16px; fill: currentColor; }
+.nav-count { margin-left: auto; background: var(--ms-blue); color: white; font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 10px; min-width: 20px; height: 18px; display: flex; align-items: center; justify-content: center; }
+.nav-item.active .nav-count { background: var(--ms-blue-darker); }
+.nav-separator { height: 1px; background: var(--gray-10); margin: 6px 12px; }
+.nav-footer { margin-top: auto; padding: 10px 14px 12px; border-top: 1px solid var(--gray-10); font-size: 12px; color: var(--gray-60); display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-20); flex-shrink: 0; }
+.status-dot.ok  { background: var(--success); }
+.status-dot.err { background: var(--error); }
+
+/* ── Content ── */
+#content { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: var(--white); }
+.page { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
+.page.active { display: flex; }
+
+/* ── Page header ── */
+.page-header { background: var(--white); border-bottom: 1px solid var(--gray-10); padding: 18px 28px 14px; flex-shrink: 0; }
+.page-breadcrumb { font-size: 11px; color: var(--gray-60); margin-bottom: 4px; }
+.page-title { font-size: 20px; font-weight: 600; color: var(--gray-90); }
+
+/* ── Command bar ── */
+.command-bar { display: flex; align-items: center; gap: 2px; padding: 6px 28px; border-bottom: 1px solid var(--gray-10); background: var(--white); flex-shrink: 0; flex-wrap: wrap; }
+.cmd-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--gray-90); font-family: var(--font); font-size: 13px; cursor: pointer; transition: background .08s, border-color .08s; white-space: nowrap; }
+.cmd-btn:hover { background: var(--gray-6); border-color: var(--gray-10); }
+.cmd-btn:active { background: var(--gray-10); }
+.cmd-btn.primary { background: var(--ms-blue); color: white; border-color: var(--ms-blue); }
+.cmd-btn.primary:hover { background: var(--ms-blue-dark); border-color: var(--ms-blue-dark); }
+.cmd-btn:disabled { opacity: .4; cursor: default; pointer-events: none; }
+.cmd-btn svg { width: 14px; height: 14px; fill: currentColor; }
+.cmd-sep { width: 1px; height: 24px; background: var(--gray-10); margin: 0 4px; }
+.cmd-spacer { flex: 1; }
+.cmd-search { display: flex; align-items: center; border: 1px solid var(--gray-20); border-radius: var(--radius); background: var(--white); }
+.cmd-search input { border: none; outline: none; padding: 5px 10px; font-family: var(--font); font-size: 13px; color: var(--gray-90); background: transparent; width: 220px; }
+.cmd-search input::placeholder { color: var(--gray-30); }
+.cmd-search:focus-within { border-color: var(--ms-blue); }
+
+/* ── Stats ── */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-tile { background: var(--white); border: 1px solid var(--gray-10); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-4); }
+.stat-val { font-size: 28px; font-weight: 700; color: var(--gray-90); }
+.stat-label { font-size: 12px; color: var(--gray-60); margin-top: 2px; }
+.stat-tile.accent .stat-val { color: var(--ms-blue); }
+.stat-tile.success .stat-val { color: var(--success); }
+.stat-tile.error .stat-val   { color: var(--error); }
+
+/* ── Card ── */
+.card { background: var(--white); border: 1px solid var(--gray-10); border-radius: var(--radius); box-shadow: var(--shadow-4); margin-bottom: 16px; }
+.card-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-6); font-size: 13px; font-weight: 600; color: var(--gray-90); background: var(--gray-2); border-radius: var(--radius) var(--radius) 0 0; }
+.card-body { padding: 16px; }
+
+/* ── Form ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group.full { grid-column: 1 / -1; }
+label { font-size: 12px; font-weight: 600; color: var(--gray-80); }
+label .req { color: var(--error); margin-left: 2px; }
+input[type=text], input[type=password], input[type=tel], select, textarea {
+  font-family: var(--font); font-size: 13.5px; color: var(--gray-90); background: var(--white);
+  border: 1px solid var(--gray-20); border-radius: var(--radius-sm);
+  padding: 6px 10px; outline: none; transition: border-color .1s, box-shadow .1s; width: 100%;
+}
+input:hover, select:hover { border-color: var(--gray-60); }
+input:focus, select:focus { border-color: var(--ms-blue); box-shadow: 0 0 0 1px var(--ms-blue); }
+input::placeholder { color: var(--gray-30); }
+select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23605e5c'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; appearance: none; }
+.field-hint { font-size: 11px; color: var(--gray-60); margin-top: 2px; }
+.upn-preview { background: var(--gray-4); border: 1px solid var(--gray-10); border-radius: var(--radius-sm); padding: 6px 10px; font-family: 'Consolas', monospace; font-size: 13px; color: var(--ms-blue-darker); min-height: 32px; }
+
+/* ── Choice group ── */
+.choice-group { display: flex; gap: 24px; }
+.choice-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13.5px; color: var(--gray-90); padding: 6px 0; }
+.choice-radio { width: 16px; height: 16px; border: 2px solid var(--gray-60); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: border-color .1s; }
+.choice-item.selected .choice-radio { border-color: var(--ms-blue); }
+.choice-radio-inner { width: 6px; height: 6px; border-radius: 50%; background: var(--ms-blue); display: none; }
+.choice-item.selected .choice-radio-inner { display: block; }
+.choice-label small { font-size: 11px; color: var(--gray-60); display: block; }
+
+/* ── Table ── */
+.details-list { width: 100%; border-collapse: collapse; font-size: 13px; }
+.details-list thead tr { background: var(--gray-2); }
+.details-list th { padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--gray-60); border-bottom: 2px solid var(--gray-10); white-space: nowrap; }
+.details-list td { padding: 9px 14px; border-bottom: 1px solid var(--gray-6); vertical-align: middle; }
+.details-list tbody tr:hover td { background: var(--gray-2); }
+.details-list tbody tr:last-child td { border-bottom: none; }
+
+/* ── Badges ── */
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-success { background: var(--success-bg); color: #0b6a0b; }
+.badge-error   { background: var(--error-bg);   color: #8e1a1f; }
+.badge-info    { background: var(--info-bg);     color: var(--ms-blue-darker); }
+.badge-neutral { background: var(--gray-6);      color: var(--gray-60); }
+.badge-warn    { background: var(--warning-bg);  color: #4a3800; }
+
+/* ── Message bar ── */
+.msgbar { display: none; padding: 10px 14px; font-size: 13px; border-left: 3px solid; margin-bottom: 14px; border-radius: 0 var(--radius) var(--radius) 0; }
+.msgbar.show { display: flex; align-items: flex-start; gap: 10px; }
+.msgbar.success { background: var(--success-bg); border-color: var(--success); color: #0b6a0b; }
+.msgbar.error   { background: var(--error-bg);   border-color: var(--error);   color: #8e1a1f; }
+.msgbar.info    { background: var(--info-bg);     border-color: var(--ms-blue); color: var(--ms-blue-darker); }
+
+/* ── Dialog ── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 900; }
+.overlay.show { display: flex; }
+.dialog { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow-16); min-width: 360px; max-width: 520px; width: 100%; overflow: hidden; }
+.dialog-header { padding: 18px 20px 12px; font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--gray-10); }
+.dialog-body { padding: 16px 20px; }
+.dialog-footer { padding: 12px 20px; border-top: 1px solid var(--gray-10); display: flex; justify-content: flex-end; gap: 8px; background: var(--gray-2); }
+
+/* ── Log ── */
+#log-content { font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.8; background: var(--gray-90); color: #d4d4d4; padding: 14px 16px; border-radius: var(--radius); max-height: 480px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+.log-create { color: #4ec994; }
+.log-toggle { color: #dcdcaa; }
+.log-error  { color: #f48771; }
+.log-muted  { color: #858585; }
+
+/* ── Loading ── */
+.overlay-loading { position: fixed; inset: 0; background: rgba(255,255,255,.75); display: none; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; gap: 12px; }
+.overlay-loading.show { display: flex; }
+.ms-spinner { width: 32px; height: 32px; border: 3px solid var(--ms-blue-light); border-top-color: var(--ms-blue); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner-label { font-size: 13px; color: var(--gray-60); }
+
+/* ── CSV import specific ── */
+.drop-zone {
+  border: 2px dashed var(--gray-20); border-radius: var(--radius);
+  padding: 32px 20px; text-align: center; cursor: pointer;
+  transition: border-color .15s, background .15s;
+  background: var(--gray-2); margin-bottom: 16px;
+}
+.drop-zone:hover, .drop-zone.drag-over { border-color: var(--ms-blue); background: var(--info-bg); }
+.drop-zone-title { font-size: 14px; font-weight: 600; color: var(--gray-80); margin-bottom: 4px; }
+.drop-zone-sub   { font-size: 12px; color: var(--gray-60); }
+.csv-preview-wrap { overflow-x: auto; max-height: 280px; overflow-y: auto; border: 1px solid var(--gray-10); border-radius: var(--radius); margin-bottom: 14px; }
+.csv-badge-crear       { background: #dff6dd; color: #0b6a0b; }
+.csv-badge-editar      { background: var(--info-bg); color: var(--ms-blue-darker); }
+.csv-badge-desactivar  { background: var(--error-bg); color: #8e1a1f; }
+.csv-badge-activar     { background: var(--warning-bg); color: #4a3800; }
+.csv-badge-error       { background: var(--error-bg); color: #8e1a1f; }
+.result-row-error td   { background: #fff5f5; }
+.result-row-ok    td   { background: #f6fff6; }
+
+/* ── Results summary ── */
+.result-summary { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.result-chip { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+
+
+
+/* ── Tabla de usuarios — columnas ordenables y filtros ── */
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.th-sortable:hover { background: var(--gray-6); }
+.th-sort-icon {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  color: var(--gray-30);
+  vertical-align: middle;
+}
+.th-sortable.sort-asc  .th-sort-icon { color: var(--ms-blue); }
+.th-sortable.sort-desc .th-sort-icon { color: var(--ms-blue); }
+.col-filter {
+  width: 100%;
+  margin-top: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-family: var(--font);
+  border: 1px solid var(--gray-10);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--gray-90);
+  outline: none;
+  box-sizing: border-box;
+}
+.col-filter:focus { border-color: var(--ms-blue); }
+.col-filter-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23605e5c'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  padding-right: 18px;
+  cursor: pointer;
+}
+.users-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 10px 10px 10px;
+}
+
+/* ── Pestañas (Fluent Pivot) ── */
+.pivot { display: flex; border-bottom: 1px solid var(--gray-10); margin-bottom: 20px; gap: 0; }
+.pivot-tab {
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-family: var(--font);
+  color: var(--gray-60);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .1s, border-color .1s;
+  white-space: nowrap;
+}
+.pivot-tab:hover { color: var(--gray-90); }
+.pivot-tab.active { color: var(--ms-blue); border-bottom-color: var(--ms-blue); font-weight: 600; }
+.pivot-panel { display: none; }
+.pivot-panel.active { display: block; }
+
+/* ── Misc ── */
+.page-body { padding: 20px 28px; }
+.font-mono { font-family: 'Consolas', monospace; font-size: 12.5px; color: var(--gray-60); }
+.empty-state { padding: 48px 20px; text-align: center; color: var(--gray-60); font-size: 13px; }
+.empty-state strong { display: block; font-size: 15px; font-weight: 600; color: var(--gray-80); margin-bottom: 6px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray-20); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gray-30); }
+</style>
+</head>
+<body>
+
+<!-- Titlebar -->
+<div id="titlebar">
+  <div class="tb-icon">
+    <svg viewBox="0 0 20 20" fill="#0078d4"><rect x="1" y="1" width="8.5" height="8.5"/><rect x="10.5" y="1" width="8.5" height="8.5"/><rect x="1" y="10.5" width="8.5" height="8.5"/><rect x="10.5" y="10.5" width="8.5" height="8.5"/></svg>
+  </div>
+  <span class="tb-title">m365OnlineTool — Administrador de Cuentas Microsoft 365 Plan A1</span>
+  <div class="tb-spacer"></div>
+  <div class="tb-controls">
+    <button class="tb-btn" onclick="window.api.minimize()"><svg viewBox="0 0 10 1"><rect width="10" height="1" fill="white"/></svg></button>
+    <button class="tb-btn" onclick="window.api.maximize()"><svg viewBox="0 0 10 10"><rect width="10" height="10" fill="none" stroke="white" stroke-width="1.2"/></svg></button>
+    <button class="tb-btn close" onclick="window.api.close()"><svg viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="white" stroke-width="1.4"/><line x1="10" y1="0" x2="0" y2="10" stroke="white" stroke-width="1.4"/></svg></button>
+  </div>
+</div>
+
+<div id="shell">
+  <!-- Nav -->
+  <nav id="nav">
+    <div class="nav-header">Principal</div>
+    <div class="nav-item active" data-page="dashboard" onclick="nav(this)">
+      <span class="nav-icon"><svg viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zM10 5v5.25l3.5 2-.75 1.3L9 11V5h1z"/></svg></span>
+      Panel
+    </div>
+    <div class="nav-item" data-page="create" onclick="nav(this)">
+      <span class="nav-icon"><svg viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm1 5v2h2v2h-2v2H9v-2H7V9h2V7h2z"/></svg></span>
+      Nueva Cuenta
+    </div>
+    <div class="nav-item" data-page="users" onclick="nav(this)">
+      <span class="nav-icon"><svg viewBox="0 0 20 20"><path d="M13 12c2.21 0 4 1.79 4 4v1H3v-1c0-2.21 1.79-4 4-4h6zm-3-1a4 4 0 110-8 4 4 0 010 8z"/></svg></span>
+      Usuarios
+      <span class="nav-count" id="nav-count">0</span>
+    </div>
+    <div class="nav-item" data-page="import" onclick="nav(this)">
+      <span class="nav-icon"><svg viewBox="0 0 20 20"><path d="M10 2l6 6h-4v6H8V8H4l6-6zm-7 14h14v2H3v-2z"/></svg></span>
+      Importar CSV
+    </div>
+    <div class="nav-separator"></div>
+    <div class="nav-header">Sistema</div>
+    <div class="nav-item" data-page="log" onclick="nav(this)">
+      <span class="nav-icon"><svg viewBox="0 0 20 20"><path d="M4 4h12v1.5H4V4zm0 4h12v1.5H4V8zm0 4h8v1.5H4V12z"/></svg></span>
+      Registro de Actividad
+    </div>
+    <div class="nav-item" data-page="config" onclick="nav(this)">
+      <span class="nav-icon"><svg viewBox="0 0 20 20"><path d="M10 12.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5zm5.93-1.5l1.12.65-1.5 2.6-1.13-.66a5.5 5.5 0 01-1.12.65L13 16h-3l-.3-1.76a5.5 5.5 0 01-1.12-.65l-1.13.66-1.5-2.6L7.07 11a5.5 5.5 0 010-2L5.95 8.35l1.5-2.6 1.13.66A5.5 5.5 0 0110 5.75 5.5 5.5 0 0110 4c.37 0 .74.03 1.1.08l.2-1.08H14l.3 1.76c.4.17.77.39 1.12.65l1.13-.66 1.5 2.6L16.93 9a5.5 5.5 0 010 2z"/></svg></span>
+      Configuración
+    </div>
+    <div class="nav-footer">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-label">Sin configurar</span>
+    </div>
+  </nav>
+
+  <div id="content">
+
+    <!-- ═══ PANEL ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-breadcrumb">m365OnlineTool</div>
+        <div class="page-title">Panel</div>
+      </div>
+      <div class="command-bar">
+        <button class="cmd-btn primary" onclick="loadDashboard()">
+          <svg viewBox="0 0 16 16"><path d="M14 8A6 6 0 112 8a6 6 0 0112 0zM8 3v5h3v1H7V3h1z" fill="white"/></svg>
+          Actualizar
+        </button>
+        <button class="cmd-btn" onclick="nav(document.querySelector('[data-page=config]'))">
+          <svg viewBox="0 0 16 16"><path d="M8 10a2 2 0 110-4 2 2 0 010 4zm4.74-1.2l.9.52-1.2 2.08-.9-.53a4.4 4.4 0 01-.9.52L10.4 13H7.6l-.24-1.61a4.4 4.4 0 01-.9-.52l-.9.53L4.36 9.32l.9-.52a4.4 4.4 0 010-1.6l-.9-.52 1.2-2.08.9.53a4.4 4.4 0 01.9-.52L7.6 3h2.8l.24 1.61c.32.14.62.32.9.52l.9-.53 1.2 2.08-.9.52a4.4 4.4 0 010 1.6z"/></svg>
+          Configuración API
+        </button>
+      </div>
+      <div class="page-body">
+        <div class="stats-row">
+          <div class="stat-tile"><div class="stat-val" id="stat-total">—</div><div class="stat-label">Total de usuarios</div></div>
+          <div class="stat-tile success"><div class="stat-val" id="stat-active">—</div><div class="stat-label">Cuentas activas</div></div>
+          <div class="stat-tile error"><div class="stat-val" id="stat-inactive">—</div><div class="stat-label">Cuentas inactivas</div></div>
+          <div class="stat-tile accent"><div class="stat-val" id="stat-licensed">—</div><div class="stat-label">Con licencia asignada</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Licencias disponibles — Plan A1</div>
+          <div class="card-body" id="lic-body"><div class="empty-state"><strong>Sin datos</strong>Configure las credenciales de Azure para cargar las licencias.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ NUEVA CUENTA ═══ -->
+    <div class="page" id="page-create">
+      <div class="page-header">
+        <div class="page-breadcrumb">m365OnlineTool</div>
+        <div class="page-title">Nueva Cuenta</div>
+      </div>
+      <div class="command-bar">
+        <button class="cmd-btn primary" onclick="createUser()">
+          <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm1 4v2h2v2H9v2H7V9H5V7h2V5h2z" fill="white"/></svg>
+          Crear cuenta
+        </button>
+        <button class="cmd-btn" onclick="clearForm()">
+          <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.5 9.5l-1 1L8 9l-2.5 2.5-1-1L7 8 4.5 5.5l1-1L8 7l2.5-2.5 1 1L9 8l2.5 2.5z"/></svg>
+          Limpiar
+        </button>
+      </div>
+      <div class="page-body">
+        <div id="msg-create"></div>
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header">Tipo de cuenta</div>
+          <div class="card-body">
+            <div class="choice-group" id="tipo-group">
+              <div class="choice-item selected" data-tipo="maestro" onclick="selectTipo(this)">
+                <div class="choice-radio"><div class="choice-radio-inner"></div></div>
+                <div class="choice-label">Maestro<small>Prefijo: m.nombre@dominio</small></div>
+              </div>
+              <div class="choice-item" data-tipo="estudiante" onclick="selectTipo(this)">
+                <div class="choice-radio"><div class="choice-radio-inner"></div></div>
+                <div class="choice-label">Estudiante<small>Prefijo: e.nombre@dominio</small></div>
+              </div>
+              <div class="choice-item" data-tipo="otro" onclick="selectTipo(this)">
+                <div class="choice-radio"><div class="choice-radio-inner"></div></div>
+                <div class="choice-label">Otro<small>Sin prefijo: nombre@dominio</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header">Información personal</div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group"><label>Nombres <span class="req">*</span></label><input type="text" id="f-fn" placeholder="Ej: María Fernanda" oninput="updatePreview()"/></div>
+              <div class="form-group"><label>Apellidos <span class="req">*</span></label><input type="text" id="f-ln" placeholder="Ej: González Pérez" oninput="updatePreview()"/></div>
+              <div class="form-group"><label>Dominio <span class="req">*</span></label><input type="text" id="f-domain" placeholder="escuela.org" oninput="updatePreview()"/></div>
+              <div class="form-group"><label>Correo institucional</label><div class="upn-preview" id="upn-prev">— Completar los campos anteriores —</div></div>
+              <div class="form-group"><label>Teléfono celular (recuperación de cuenta)</label><input type="tel" id="f-phone" placeholder="+57 300 1234567"/><span class="field-hint">Se registrará como método de autenticación MFA</span></div>
+              <div class="form-group"><label>Contraseña temporal (generada automáticamente)</label><div style="display:flex;gap:6px;align-items:center;"><code id="f-pass-display" style="font-family:Consolas,monospace;font-size:13px;background:var(--gray-4);padding:6px 10px;border-radius:2px;border:1px solid var(--gray-10);flex:1;color:var(--ms-blue-darker);">—</code><button class="cmd-btn" style="padding:5px 10px;font-size:12px;" onclick="refreshPassword()">&#8635;</button></div><input type="hidden" id="f-pass"/><span class="field-hint">El usuario deberá cambiarla en el primer inicio de sesión</span></div>
+              <div class="form-group"><label>Cédula (CustomAttribute2)</label><input type="text" id="f-cedula" placeholder="10000001"/><span class="field-hint">Se guarda en extensionAttribute2</span></div>
+              <div class="form-group"><label>Correo personal (CustomAttribute3)</label><input type="text" id="f-mailpersonal" placeholder="john.doe@correo.com"/><span class="field-hint">Se guarda en extensionAttribute3</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- SKU oculto — se obtiene automáticamente desde la configuración según el tipo -->
+        <input type="hidden" id="f-sku" value=""/>
+      </div>
+    </div>
+
+    <!-- ═══ USUARIOS ═══ -->
+    <div class="page" id="page-users">
+      <div class="page-header">
+        <div class="page-breadcrumb">m365OnlineTool</div>
+        <div class="page-title">Usuarios</div>
+      </div>
+      <div class="command-bar">
+        <button class="cmd-btn primary" onclick="loadUsers()">
+          <svg viewBox="0 0 16 16"><path d="M14 8A6 6 0 112 8a6 6 0 0112 0zM8 3v5h3v1H7V3h1z" fill="white"/></svg>
+          Actualizar lista
+        </button>
+        <button class="cmd-btn" onclick="exportUsersCSV()">
+          <svg viewBox="0 0 16 16"><path d="M8 12l-5-5 1-1 3.5 3.5V2h1.5v7.5L12 6l1 1-5 5zM2 14h12v1.5H2V14z"/></svg>
+          Exportar CSV
+        </button>
+        <div class="cmd-spacer"></div>
+        <span id="users-count-label" style="font-size:12px;color:var(--gray-60);white-space:nowrap;"></span>
+      </div>
+      <div class="users-wrap">
+        <table class="details-list" id="users-table">
+          <thead>
+            <tr>
+              <th class="th-sortable" data-col="displayName" onclick="sortUsers(this)">
+                Nombre completo <span class="th-sort-icon">&#8597;</span>
+                <div><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-nombre" onclick="event.stopPropagation()"/></div>
+              </th>
+              <th class="th-sortable" data-col="userPrincipalName" onclick="sortUsers(this)">
+                Usuario (UPN) <span class="th-sort-icon">&#8597;</span>
+                <div><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-upn" onclick="event.stopPropagation()"/></div>
+              </th>
+              <th class="th-sortable" data-col="tipo" onclick="sortUsers(this)">
+                Tipo <span class="th-sort-icon">&#8597;</span>
+                <div><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-tipo" onclick="event.stopPropagation()">
+                  <option value="">Todos</option>
+                  <option value="maestro">Maestro</option>
+                  <option value="estudiante">Estudiante</option>
+                  <option value="otro">Otro</option>
+                </select></div>
+              </th>
+              <th class="th-sortable" data-col="mobilePhone" onclick="sortUsers(this)">
+                Teléfono <span class="th-sort-icon">&#8597;</span>
+                <div><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-tel" onclick="event.stopPropagation()"/></div>
+              </th>
+              <th class="th-sortable" data-col="licencia" onclick="sortUsers(this)">
+                Licencia <span class="th-sort-icon">&#8597;</span>
+                <div><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-lic" onclick="event.stopPropagation()">
+                  <option value="">Todos</option>
+                  <option value="1">Con licencia</option>
+                  <option value="0">Sin licencia</option>
+                </select></div>
+              </th>
+              <th class="th-sortable" data-col="accountEnabled" onclick="sortUsers(this)">
+                Estado <span class="th-sort-icon">&#8597;</span>
+                <div><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-estado" onclick="event.stopPropagation()">
+                  <option value="">Todos</option>
+                  <option value="1">Activo</option>
+                  <option value="0">Inactivo</option>
+                </select></div>
+              </th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="users-body">
+            <tr><td colspan="7"><div class="empty-state"><strong>Sin datos</strong>Haga clic en Actualizar lista o configure las credenciales.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ IMPORTAR CSV ═══ -->
+    <div class="page" id="page-import">
+      <div class="page-header">
+        <div class="page-breadcrumb">m365OnlineTool</div>
+        <div class="page-title">Importar CSV</div>
+      </div>
+      <div class="command-bar">
+        <button class="cmd-btn primary" id="btn-run-csv" onclick="runCsvImport()" disabled>
+          <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm1 4v2h2v2H9v2H7V9H5V7h2V5h2z" fill="white"/></svg>
+          Procesar importación
+        </button>
+        <button class="cmd-btn" onclick="selectCsvFile()">
+          <svg viewBox="0 0 16 16"><path d="M13 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1zM8 12l-4-4 1-1 3 3 5-5 1 1-6 6z"/></svg>
+          Seleccionar archivo CSV
+        </button>
+        <button class="cmd-btn" onclick="window.api.downloadCsvTemplate()">
+          <svg viewBox="0 0 16 16"><path d="M8 12l-5-5 1-1 3.5 3.5V2h1.5v7.5L12 6l1 1-5 5zM2 14h12v1.5H2V14z"/></svg>
+          Descargar plantilla
+        </button>
+        <button class="cmd-btn" onclick="clearCsvImport()">
+          <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.5 9.5l-1 1L8 9l-2.5 2.5-1-1L7 8 4.5 5.5l1-1L8 7l2.5-2.5 1 1L9 8l2.5 2.5z"/></svg>
+          Limpiar
+        </button>
+      </div>
+      <div class="page-body">
+        <div id="msg-import"></div>
+
+        <!-- Instrucciones -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header">Formato del archivo CSV</div>
+          <div class="card-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+              <p style="font-size:13px;color:var(--gray-60);margin:0;">El archivo debe tener la siguiente estructura de columnas. Descarga la plantilla para comenzar rápidamente.</p>
+              <button class="cmd-btn" id="btn-ver-ejemplo" onclick="toggleEjemploCsv()" style="white-space:nowrap;flex-shrink:0;">Ver ejemplo</button>
+            </div>
+            <div id="csv-ejemplo-wrap" style="display:none;margin-top:14px;overflow-x:auto;">
+              <table class="details-list" style="font-size:12px;">
+                <thead><tr><th>accion</th><th>tipo</th><th>nombres</th><th>apellidos</th><th>dominio</th><th>telefono</th><th>contrasena</th><th>skuId</th><th>upn_existente</th><th>cedula</th><th>mailpersonal</th><th>observacion</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="badge csv-badge-crear">crear</span></td><td>maestro / estudiante / otro</td><td>John</td><td>Doe</td><td>escuela.org</td><td>+57 3001234567</td><td>Cambiar2024!</td><td>(opcional)</td><td>(vacío)</td><td>10000001</td><td>john.doe@correo.com</td><td>Ejemplo maestro</td></tr>
+                  <tr><td><span class="badge csv-badge-editar">editar</span></td><td>(vacío)</td><td>(vacío)</td><td>(vacío)</td><td>(vacío)</td><td>+57 3001111111</td><td>(vacío)</td><td>(vacío)</td><td>m.jdoe@escuela.org</td><td>(opcional)</td><td>(opcional)</td><td>(opcional)</td></tr>
+                  <tr><td><span class="badge csv-badge-desactivar">desactivar</span></td><td colspan="7">(vacío)</td><td>e.jdoe@escuela.org</td><td>(vacío)</td><td>(vacío)</td><td>(vacío)</td></tr>
+                  <tr><td><span class="badge badge-warn">activar</span></td><td colspan="7">(vacío)</td><td>adoe@escuela.org</td><td>(vacío)</td><td>(vacío)</td><td>(vacío)</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zona de carga -->
+        <div class="drop-zone" id="drop-zone" onclick="selectCsvFile()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+          <div class="drop-zone-title" id="dz-title">Haga clic para seleccionar un archivo CSV</div>
+          <div class="drop-zone-sub" id="dz-sub">O arrastre y suelte el archivo aquí</div>
+        </div>
+
+        <!-- Licencia por defecto para creaciones -->
+        <div id="csv-sku-wrap" style="display:none;margin-bottom:14px;">
+          <div class="card">
+            <div class="card-header">Licencia predeterminada para cuentas nuevas</div>
+            <div class="card-body">
+              <div class="form-group" style="max-width:480px;">
+                <label>Licencia A1 (se aplica a las filas de acción "crear" que no especifiquen skuId)</label>
+                <select id="csv-default-sku"><option value="">— Sin licencia predeterminada —</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vista previa del CSV -->
+        <div id="csv-preview-section" style="display:none;">
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Vista previa — <span id="csv-row-count">0</span> filas cargadas</span>
+              <span style="font-size:11px;color:var(--gray-60);" id="csv-file-name"></span>
+            </div>
+            <div class="csv-preview-wrap">
+              <table class="details-list" id="csv-preview-table">
+                <thead><tr><th>#</th><th>Acción</th><th>Tipo</th><th>Nombres</th><th>Apellidos</th><th>Dominio / UPN existente</th><th>Teléfono</th><th>Cédula</th><th>Correo personal</th><th>Observación</th></tr></thead>
+                <tbody id="csv-preview-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resultados -->
+        <div id="csv-results-section" style="display:none;margin-top:16px;">
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="card-header">Resultados de la importación</div>
+            <div class="card-body" style="padding:12px 16px 8px;">
+              <div class="result-summary" id="result-summary"></div>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="details-list" id="results-table">
+                <thead><tr><th>Fila</th><th>Acción</th><th>Usuario (UPN)</th><th>Estado</th><th>Detalle</th></tr></thead>
+                <tbody id="results-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ REGISTRO ═══ -->
+    <div class="page" id="page-log">
+      <div class="page-header">
+        <div class="page-breadcrumb">m365OnlineTool</div>
+        <div class="page-title">Registro de Actividad</div>
+      </div>
+      <div class="command-bar">
+        <button class="cmd-btn primary" onclick="downloadLog()">
+          <svg viewBox="0 0 16 16"><path d="M8 12l-5-5 1-1 3.5 3.5V2h1.5v7.5L12 6l1 1-5 5zM2 14h12v1.5H2V14z" fill="white"/></svg>
+          Descargar registro
+        </button>
+        <button class="cmd-btn" onclick="refreshLog()">
+          <svg viewBox="0 0 16 16"><path d="M14 8A6 6 0 112 8a6 6 0 0112 0zM8 3v5h3v1H7V3h1z"/></svg>
+          Actualizar
+        </button>
+        <button class="cmd-btn" style="color:var(--error);" onclick="clearLog()">
+          <svg viewBox="0 0 16 16"><path d="M6 2h4l1 1h3v1H2V3h3l1-1zm1 3h2v7H7V5zm-2 0H4l.5 8h7L12 5h-1v7H9V5H7z" fill="currentColor"/></svg>
+          Limpiar registro
+        </button>
+      </div>
+      <div class="page-body"><div id="log-content">Cargando...</div></div>
+    </div>
+
+    <!-- ═══ CONFIGURACIÓN ═══ -->
+    <div class="page" id="page-config">
+      <div class="page-header">
+        <div class="page-breadcrumb">m365OnlineTool</div>
+        <div class="page-title">Configuración</div>
+      </div>
+      <div class="command-bar">
+        <button class="cmd-btn primary" onclick="saveConfig()">
+          <svg viewBox="0 0 16 16"><path d="M2 2h9l3 3v9H2V2zm8 0v4H5V2h5zm2 .5V5h2.5L12 2.5zM3 9h10v5H3V9zm1 1v3h8v-3H4z" fill="white"/></svg>
+          Guardar configuración
+        </button>
+        <button class="cmd-btn" onclick="testConnection()">
+          <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.3 4.7l-4 4-2-2 1-1 1 1 3-3 1 1z"/></svg>
+          Probar conexión
+        </button>
+      </div>
+      <div class="page-body" style="max-width:760px;">
+        <div id="msg-config"></div>
+
+        <!-- Pestañas Pivot -->
+        <div class="pivot">
+          <button class="pivot-tab active" onclick="cfgTab(this,'cfg-azure')">Azure AD</button>
+          <button class="pivot-tab" onclick="cfgTab(this,'cfg-org')">Datos organizacionales</button>
+          <button class="pivot-tab" onclick="cfgTab(this,'cfg-lic')">Licencias y Contraseña</button>
+          <button class="pivot-tab" onclick="cfgTab(this,'cfg-about')">Información</button>
+        </div>
+
+        <!-- Pestaña 1: Azure AD -->
+        <div class="pivot-panel active" id="cfg-azure">
+          <p style="font-size:13px;color:var(--gray-60);margin-bottom:16px;line-height:1.6;">
+            Registre una aplicación en <strong>portal.azure.com</strong> con permisos de tipo <em>Application</em>:
+            User.ReadWrite.All, Directory.ReadWrite.All, UserAuthenticationMethod.ReadWrite.All.
+            Otorgue consentimiento de administrador.
+          </p>
+          <div class="form-grid">
+            <div class="form-group"><label>ID de directorio (Tenant ID)</label><input type="text" id="cfg-tid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></div>
+            <div class="form-group"><label>ID de aplicación (Client ID)</label><input type="text" id="cfg-cid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></div>
+            <div class="form-group full"><label>Secreto de cliente (Client Secret)</label><input type="password" id="cfg-sec" placeholder="Valor del secreto generado en Azure"/></div>
+            <div class="form-group"><label>Dominio predeterminado</label><input type="text" id="cfg-dom" placeholder="@escuela.org"/><span class="field-hint">Se usará como dominio por defecto al crear cuentas</span></div>
+          </div>
+        </div>
+
+        <!-- Pestaña 2: Datos organizacionales -->
+        <div class="pivot-panel" id="cfg-org">
+          <p style="font-size:13px;color:var(--gray-60);margin-bottom:16px;line-height:1.6;">
+            Estos valores se aplican automáticamente al crear cualquier cuenta, ya sea de forma manual o mediante importación CSV.
+          </p>
+          <div class="form-grid cols3">
+            <div class="form-group">
+              <label>Ciudad (City)</label>
+              <input type="text" id="cfg-city" placeholder="CUNDINAMARCA"/>
+            </div>
+            <div class="form-group">
+              <label>País (Country)</label>
+              <input type="text" id="cfg-country" placeholder="COLOMBIA"/>
+            </div>
+            <div class="form-group">
+              <label>Ubicación de uso (UsageLocation)</label>
+              <input type="text" id="cfg-usage" placeholder="CO" maxlength="2"/>
+              <span class="field-hint">Código ISO de 2 letras — requerido para asignar licencias</span>
+            </div>
+            <div class="form-group">
+              <label>Departamento (Department)</label>
+              <input type="text" id="cfg-dept" placeholder="ACADEMICA"/>
+            </div>
+            <div class="form-group">
+              <label>Oficina (Office)</label>
+              <input type="text" id="cfg-office" placeholder="ESCUELA"/>
+            </div>
+            <div class="form-group">
+              <label>Teléfono de la organización</label>
+              <input type="text" id="cfg-phone" placeholder="(+57) 6019999999"/>
+            </div>
+            <div class="form-group">
+              <label>Prefijo telefónico (AlternateMobilePhones)</label>
+              <input type="text" id="cfg-prefix" placeholder="+57" maxlength="6"/>
+              <span class="field-hint">Se antepone al celular al registrar el usuario (ej: +57 3001234567)</span>
+            </div>
+            <div class="form-group">
+              <label>Código postal (PostalCode)</label>
+              <input type="text" id="cfg-postal" placeholder="111711"/>
+            </div>
+            <div class="form-group">
+              <label>Departamento / Estado (State)</label>
+              <input type="text" id="cfg-state" placeholder="BOGOTA D.C."/>
+            </div>
+            <div class="form-group">
+              <label>Dirección (StreetAddress)</label>
+              <input type="text" id="cfg-street" placeholder="CALLE 99 No. 99-99"/>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Pestaña 3: Licencias y Contraseña -->
+        <div class="pivot-panel" id="cfg-lic">
+          <div style="margin-bottom:20px;">
+            <p style="font-size:13px;color:var(--gray-60);margin-bottom:16px;line-height:1.6;">
+              Asigne una licencia predeterminada por tipo de cuenta. Se aplica automáticamente al crear cuentas manualmente o mediante CSV (si la fila no especifica un SKU propio).
+            </p>
+            <div class="form-grid cols3">
+              <div class="form-group">
+                <label>SKU — Maestros</label>
+                <select id="cfg-sku-maestro"><option value="">— Sin licencia predeterminada —</option></select>
+                <span class="field-hint">Se asigna a cuentas con prefijo m.</span>
+              </div>
+              <div class="form-group">
+                <label>SKU — Estudiantes</label>
+                <select id="cfg-sku-estudiante"><option value="">— Sin licencia predeterminada —</option></select>
+                <span class="field-hint">Se asigna a cuentas con prefijo e.</span>
+              </div>
+              <div class="form-group">
+                <label>SKU — Otros</label>
+                <select id="cfg-sku-otro"><option value="">— Sin licencia predeterminada —</option></select>
+                <span class="field-hint">Se asigna a cuentas sin prefijo.</span>
+              </div>
+            </div>
+          </div>
+          <hr class="divider"/>
+          <div>
+            <p style="font-size:13px;color:var(--gray-60);margin-bottom:16px;line-height:1.6;">
+              Parámetros para la generación aleatoria de contraseñas temporales. La contraseña cambia en cada cuenta creada.
+            </p>
+            <div class="form-grid cols3">
+              <div class="form-group">
+                <label>Longitud mínima</label>
+                <input type="number" id="cfg-pw-len" min="8" max="64" value="12" style="width:100%;"/>
+                <span class="field-hint">Entre 8 y 64 caracteres</span>
+              </div>
+              <div class="form-group">
+                <label>Incluir mayúsculas (A-Z)</label>
+                <select id="cfg-pw-upper">
+                  <option value="1">Sí</option>
+                  <option value="0">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Incluir minúsculas (a-z)</label>
+                <select id="cfg-pw-lower">
+                  <option value="1">Sí</option>
+                  <option value="0">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Incluir números (0-9)</label>
+                <select id="cfg-pw-num">
+                  <option value="1">Sí</option>
+                  <option value="0">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Incluir símbolos (!@#$...)</label>
+                <select id="cfg-pw-sym">
+                  <option value="1">Sí</option>
+                  <option value="0">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Vista previa</label>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <code id="pw-preview" style="font-family:Consolas,monospace;font-size:13px;background:var(--gray-4);padding:6px 10px;border-radius:2px;border:1px solid var(--gray-10);flex:1;color:var(--ms-blue-darker);">—</code>
+                  <button class="cmd-btn" style="padding:5px 10px;font-size:12px;" onclick="previewPassword()">&#8635;</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pestaña 4: Información -->
+        <div class="pivot-panel" id="cfg-about">
+          <table style="font-size:13px;border-collapse:collapse;width:100%;max-width:420px;">
+            <tr><td style="padding:8px 0;color:var(--gray-60);width:180px;border-bottom:1px solid var(--gray-6);">Aplicación</td><td style="border-bottom:1px solid var(--gray-6);">m365OnlineTool</td></tr>
+            <tr><td style="padding:8px 0;color:var(--gray-60);border-bottom:1px solid var(--gray-6);">Versión</td><td style="border-bottom:1px solid var(--gray-6);">1.0.0</td></tr>
+            <tr><td style="padding:8px 0;color:var(--gray-60);border-bottom:1px solid var(--gray-6);">Plan soportado</td><td style="border-bottom:1px solid var(--gray-6);">Microsoft 365 A1 (Education)</td></tr>
+            <tr><td style="padding:8px 0;color:var(--gray-60);border-bottom:1px solid var(--gray-6);">API</td><td style="border-bottom:1px solid var(--gray-6);">Microsoft Graph v1.0</td></tr>
+            <tr><td style="padding:8px 0;color:var(--gray-60);border-bottom:1px solid var(--gray-6);">Configuración</td><td style="border-bottom:1px solid var(--gray-6);">m365OnlineTool.conf</td></tr>
+            <tr><td style="padding:8px 0;color:var(--gray-60);">Licencia</td><td>MIT — Código abierto</td></tr>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /shell -->
+
+<!-- Dialog editar usuario -->
+<div class="overlay" id="dlg-edit">
+  <div class="dialog">
+    <div class="dialog-header">Editar usuario</div>
+    <div class="dialog-body">
+      <input type="hidden" id="edit-uid"/>
+      <input type="hidden" id="edit-upn"/>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Teléfono celular (recuperación de cuenta)</label>
+        <input type="tel" id="edit-phone" placeholder="+52 55 1234 5678"/>
+      </div>
+      <div class="form-group">
+        <label>Asignar licencia</label>
+        <select id="edit-sku"><option value="">— Sin cambio —</option></select>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="cmd-btn" onclick="closeDlg()">Cancelar</button>
+      <button class="cmd-btn primary" onclick="saveEdit()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="overlay-loading" id="ov-load">
+  <div class="ms-spinner"></div>
+  <div class="spinner-label" id="load-msg">Procesando...</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+// Estado global
+// ════════════════════════════════════════════════
+let cfg = {};
+let allUsers = [];
+let licenses = [];
+let selectedTipo = 'maestro';
+let csvRows = [];
+
+// ════════════════════════════════════════════════
+// Arranque
+// ════════════════════════════════════════════════
+async function init() {
+  cfg = await window.api.getConfig();
+  loadConfigForm();
+  refreshPassword();
+  if (cfg.tenantId && cfg.clientId && cfg.clientSecret) {
+    setStatus('loading', 'Conectando...');
+    await loadDashboard();
+  }
+  refreshLog();
+}
+
+// ════════════════════════════════════════════════
+// Navegación
+// ════════════════════════════════════════════════
+function nav(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const p = el.dataset.page;
+  document.getElementById('page-' + p).classList.add('active');
+  if (p === 'users')     loadUsers();
+  if (p === 'log')       refreshLog();
+  if (p === 'dashboard') loadDashboard();
+}
+
+// ════════════════════════════════════════════════
+// Helpers UI
+// ════════════════════════════════════════════════
+function load(msg) { document.getElementById('load-msg').textContent = msg || 'Procesando...'; document.getElementById('ov-load').classList.add('show'); }
+function unload() { document.getElementById('ov-load').classList.remove('show'); }
+
+function setStatus(state, label) {
+  const d = document.getElementById('status-dot');
+  const l = document.getElementById('status-label');
+  d.className = 'status-dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
+  l.textContent = label || (state === 'ok' ? 'Conectado' : state === 'err' ? 'Error de conexión' : 'Sin configurar');
+}
+
+function msgbar(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = 'msgbar show ' + type;
+  el.innerHTML = `<span>${text}</span>`;
+  if (type !== 'error') setTimeout(() => { el.className = 'msgbar'; el.innerHTML = ''; }, 6000);
+}
+function clearMsg(id) { const el = document.getElementById(id); el.className = 'msgbar'; el.innerHTML = ''; }
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escA(s) { return String(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+function set(id, v) { document.getElementById(id).textContent = v; }
+
+// ════════════════════════════════════════════════
+// Dashboard
+// ════════════════════════════════════════════════
+async function loadDashboard() {
+  if (!cfg.tenantId) return;
+  load('Cargando datos del tenant...');
+  try {
+    const [ur, lr] = await Promise.all([window.api.listUsers(cfg), window.api.getLicenses(cfg)]);
+    if (ur.ok) {
+      allUsers = ur.data;
+      const act = allUsers.filter(u => u.accountEnabled).length;
+      set('stat-total',    allUsers.length);
+      set('stat-active',   act);
+      set('stat-inactive', allUsers.length - act);
+      set('stat-licensed', allUsers.filter(u => u.assignedLicenses?.length).length);
+      set('nav-count',     allUsers.length);
+      setStatus('ok');
+    }
+    if (lr.ok) { licenses = lr.data; populateLicSelects(); renderLicTable(licenses); }
+  } catch(e) { setStatus('err', 'Error de conexión'); }
+  unload();
+}
+
+function renderLicTable(lics) {
+  const el = document.getElementById('lic-body');
+  if (!lics.length) { el.innerHTML = '<div class="empty-state"><strong>Sin licencias</strong>No se encontraron SKUs en este tenant.</div>'; return; }
+  let h = '<div style="overflow-x:auto;"><table class="details-list"><thead><tr><th>SKU</th><th>ID de SKU</th><th>Asignadas</th><th>Disponibles</th><th>Estado</th></tr></thead><tbody>';
+  lics.forEach(l => {
+    const av = (l.prepaidUnits?.enabled||0) - (l.consumedUnits||0);
+    h += `<tr><td><strong>${esc(l.skuPartNumber)}</strong></td><td class="font-mono">${esc(l.skuId)}</td><td>${l.consumedUnits||0}</td><td>${av>0?av:'<span style="color:var(--error)">0</span>'}</td><td><span class="badge ${l.capabilityStatus==='Enabled'?'badge-success':'badge-error'}">${esc(l.capabilityStatus)}</span></td></tr>`;
+  });
+  el.innerHTML = h + '</tbody></table></div>';
+}
+
+function populateLicSelects() {
+  const base = licenses.map(l => `<option value="${esc(l.skuId)}">${esc(l.skuPartNumber)} (${l.consumedUnits}/${l.prepaidUnits?.enabled||0})</option>`).join('');
+  document.getElementById('edit-sku').innerHTML         = '<option value="">— Sin cambio —</option>' + base;
+  document.getElementById('csv-default-sku').innerHTML  = '<option value="">— Sin licencia predeterminada —</option>' + base;
+  // Selects en configuración
+  const cfgNone = '<option value="">— Sin licencia predeterminada —</option>';
+  const sm = document.getElementById('cfg-sku-maestro');
+  const se = document.getElementById('cfg-sku-estudiante');
+  const so = document.getElementById('cfg-sku-otro');
+  if (sm) { sm.innerHTML = cfgNone + base; sm.value = cfg.skuMaestro    || ''; }
+  if (se) { se.innerHTML = cfgNone + base; se.value = cfg.skuEstudiante || ''; }
+  if (so) { so.innerHTML = cfgNone + base; so.value = cfg.skuOtro       || ''; }
+}
+
+// ════════════════════════════════════════════════
+// Crear cuenta (manual)
+// ════════════════════════════════════════════════
+function selectTipo(el) {
+  document.querySelectorAll('.choice-item').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTipo = el.dataset.tipo;
+  updatePreview();
+}
+
+async function updatePreview() {
+  const fn  = document.getElementById('f-fn').value.trim();
+  const ln  = document.getElementById('f-ln').value.trim();
+  const raw = document.getElementById('f-domain').value.trim() || cfg.defaultDomain || '';
+  const dom = raw.replace(/^@/, '');
+  if (!fn || !ln || !dom) { document.getElementById('upn-prev').textContent = '— Completar los campos anteriores —'; return; }
+  const upn = await window.api.previewUsername({ tipo: selectedTipo, firstName: fn, lastName: ln, domain: dom });
+  document.getElementById('upn-prev').textContent = upn;
+}
+
+function clearForm() {
+  ['f-fn','f-ln','f-phone','f-cedula','f-mailpersonal'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-domain').value = cfg.defaultDomain || '';
+  refreshPassword();
+  document.getElementById('f-sku').value    = '';
+  document.getElementById('upn-prev').textContent = '— Completar los campos anteriores —';
+  clearMsg('msg-create');
+  selectedTipo = 'maestro';
+  document.querySelectorAll('.choice-item').forEach((c,i) => c.classList.toggle('selected', i===0));
+}
+
+async function createUser() {
+  const fn  = document.getElementById('f-fn').value.trim();
+  const ln  = document.getElementById('f-ln').value.trim();
+  const dom = document.getElementById('f-domain').value.trim().replace(/^@/, '');
+  const ph  = document.getElementById('f-phone').value.trim();
+  const pw  = document.getElementById('f-pass').value.trim() || generatePassword();
+  // SKU automático según tipo desde configuración
+  const sku = selectedTipo === 'maestro'    ? (cfg.skuMaestro    || '')
+            : selectedTipo === 'estudiante' ? (cfg.skuEstudiante || '')
+            : (cfg.skuOtro || '');
+
+  if (!fn || !ln || !dom) { msgbar('msg-create','error','Complete todos los campos obligatorios (nombres, apellidos y dominio).'); return; }
+  if (!cfg.tenantId)             { msgbar('msg-create','error','Configure las credenciales de Azure antes de crear cuentas.'); return; }
+
+  load('Creando cuenta en Microsoft 365...');
+  const cedula      = document.getElementById('f-cedula').value.trim();
+  const mailPersonal = document.getElementById('f-mailpersonal').value.trim();
+  const res = await window.api.createUser({ cfg, userData: { tipo: selectedTipo, firstName: fn, lastName: ln, domain: dom, phone: ph, password: pw, skuId: sku, cedula, mailPersonal } });
+  unload();
+  if (res.ok) { msgbar('msg-create','success',`Cuenta creada correctamente: ${res.upn}`); clearForm(); }
+  else        { msgbar('msg-create','error',`Error al crear la cuenta: ${res.error}`); }
+}
+
+// ════════════════════════════════════════════════
+// Usuarios
+// ════════════════════════════════════════════════
+// ── Sort state ────────────────────────────────────────────────────────────────
+let sortCol = 'displayName';
+let sortDir = 'asc'; // 'asc' | 'desc'
+
+async function loadUsers() {
+  if (!cfg.tenantId) return;
+  load('Cargando lista de usuarios...');
+  const res = await window.api.listUsers(cfg);
+  unload();
+  if (res.ok) {
+    allUsers = res.data;
+    set('nav-count', allUsers.length);
+    filterUsers();
+  }
+}
+
+function getUserTipo(upn) {
+  if ((upn||'').startsWith('m.')) return 'maestro';
+  if ((upn||'').startsWith('e.')) return 'estudiante';
+  return 'otro';
+}
+
+function filterUsers() {
+  const fNombre = (document.getElementById('cf-nombre')?.value  || '').toLowerCase();
+  const fUpn    = (document.getElementById('cf-upn')?.value     || '').toLowerCase();
+  const fTipo   = (document.getElementById('cf-tipo')?.value    || '').toLowerCase();
+  const fTel    = (document.getElementById('cf-tel')?.value     || '').toLowerCase();
+  const fLic    = (document.getElementById('cf-lic')?.value     || '');
+  const fEstado = (document.getElementById('cf-estado')?.value  || '');
+
+  let list = allUsers.filter(u => {
+    const upn   = (u.userPrincipalName || '').toLowerCase();
+    const tipo  = getUserTipo(upn);
+    const hasLic = u.assignedLicenses?.length ? '1' : '0';
+    const active = u.accountEnabled ? '1' : '0';
+    if (fNombre && !(u.displayName||'').toLowerCase().includes(fNombre)) return false;
+    if (fUpn    && !upn.includes(fUpn))                                   return false;
+    if (fTipo   && tipo !== fTipo)                                        return false;
+    if (fTel    && !(u.mobilePhone||'').toLowerCase().includes(fTel))     return false;
+    if (fLic    && hasLic !== fLic)                                       return false;
+    if (fEstado && active !== fEstado)                                    return false;
+    return true;
+  });
+
+  // Apply sort
+  list = sortList(list);
+  renderUsers(list);
+
+  // Update count label
+  const lbl = document.getElementById('users-count-label');
+  if (lbl) lbl.textContent = `${list.length} de ${allUsers.length} usuarios`;
+}
+
+function sortList(list) {
+  return [...list].sort((a, b) => {
+    let va, vb;
+    if (sortCol === 'tipo') {
+      va = getUserTipo(a.userPrincipalName||'');
+      vb = getUserTipo(b.userPrincipalName||'');
+    } else if (sortCol === 'licencia') {
+      va = a.assignedLicenses?.length ? 1 : 0;
+      vb = b.assignedLicenses?.length ? 1 : 0;
+    } else if (sortCol === 'accountEnabled') {
+      va = a.accountEnabled ? 1 : 0;
+      vb = b.accountEnabled ? 1 : 0;
+    } else {
+      va = String(a[sortCol] || '').toLowerCase();
+      vb = String(b[sortCol] || '').toLowerCase();
+    }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ?  1 : -1;
+    return 0;
+  });
+}
+
+function sortUsers(th) {
+  const col = th.dataset.col;
+  if (sortCol === col) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortCol = col;
+    sortDir = 'asc';
+  }
+  // Update header icons
+  document.querySelectorAll('.th-sortable').forEach(h => {
+    h.classList.remove('sort-asc', 'sort-desc');
+    h.querySelector('.th-sort-icon').innerHTML = '&#8597;';
+  });
+  th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  th.querySelector('.th-sort-icon').innerHTML = sortDir === 'asc' ? '&#8593;' : '&#8595;';
+  filterUsers();
+}
+
+function renderUsers(list) {
+  const body = document.getElementById('users-body');
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="7"><div class="empty-state"><strong>Sin resultados</strong>No se encontraron usuarios con los filtros aplicados.</div></td></tr>';
+    return;
+  }
+  body.innerHTML = list.map(u => {
+    const upn   = u.userPrincipalName || '';
+    const tipo  = getUserTipo(upn);
+    const tipoBadge   = tipo === 'maestro'    ? '<span class="badge badge-info">Maestro</span>'
+                      : tipo === 'estudiante' ? '<span class="badge badge-success">Estudiante</span>'
+                      : '<span class="badge badge-neutral">Otro</span>';
+    const estadoBadge = u.accountEnabled
+      ? '<span class="badge badge-success">Activo</span>'
+      : '<span class="badge badge-error">Inactivo</span>';
+    const licBadge = u.assignedLicenses?.length
+      ? '<span class="badge badge-info">Con licencia</span>'
+      : '<span class="badge badge-neutral">Sin licencia</span>';
+    const actionBtn = u.accountEnabled
+      ? `<button class="cmd-btn" style="color:var(--error);padding:3px 10px;font-size:12px;" onclick="toggleUser('${escA(u.id)}','${escA(upn)}',false)">Desactivar</button>`
+      : `<button class="cmd-btn" style="color:var(--success);padding:3px 10px;font-size:12px;" onclick="toggleUser('${escA(u.id)}','${escA(upn)}',true)">Activar</button>`;
+    return `<tr>
+      <td style="font-weight:500;">${esc(u.displayName||'—')}</td>
+      <td class="font-mono">${esc(upn)}</td>
+      <td>${tipoBadge}</td>
+      <td class="font-mono">${esc(u.mobilePhone||'—')}</td>
+      <td>${licBadge}</td>
+      <td>${estadoBadge}</td>
+      <td style="white-space:nowrap;">
+        <button class="cmd-btn" style="padding:3px 10px;font-size:12px;" onclick="openEdit('${escA(u.id)}','${escA(upn)}','${escA(u.mobilePhone||'')}')">Editar</button>
+        ${actionBtn}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function exportUsersCSV() {
+  // Obtener lista filtrada y ordenada actual
+  const fNombre = (document.getElementById('cf-nombre')?.value  || '').toLowerCase();
+  const fUpn    = (document.getElementById('cf-upn')?.value     || '').toLowerCase();
+  const fTipo   = (document.getElementById('cf-tipo')?.value    || '').toLowerCase();
+  const fTel    = (document.getElementById('cf-tel')?.value     || '').toLowerCase();
+  const fLic    = (document.getElementById('cf-lic')?.value     || '');
+  const fEstado = (document.getElementById('cf-estado')?.value  || '');
+
+  let list = allUsers.filter(u => {
+    const upn   = (u.userPrincipalName || '').toLowerCase();
+    const tipo  = getUserTipo(upn);
+    const hasLic = u.assignedLicenses?.length ? '1' : '0';
+    const active = u.accountEnabled ? '1' : '0';
+    if (fNombre && !(u.displayName||'').toLowerCase().includes(fNombre)) return false;
+    if (fUpn    && !upn.includes(fUpn))                                   return false;
+    if (fTipo   && tipo !== fTipo)                                        return false;
+    if (fTel    && !(u.mobilePhone||'').toLowerCase().includes(fTel))     return false;
+    if (fLic    && hasLic !== fLic)                                       return false;
+    if (fEstado && active !== fEstado)                                    return false;
+    return true;
+  });
+  list = sortList(list);
+
+  const bom = '\uFEFF';
+  const header = 'Nombre completo,Usuario (UPN),Tipo,Teléfono,Licencia,Estado\n';
+  const rows = list.map(u => {
+    const upn   = u.userPrincipalName || '';
+    const tipo  = getUserTipo(upn);
+    const lic   = u.assignedLicenses?.length ? 'Con licencia' : 'Sin licencia';
+    const estado = u.accountEnabled ? 'Activo' : 'Inactivo';
+    const csvVal = v => `"${String(v||'').replace(/"/g,'""')}"`;
+    return [u.displayName, upn, tipo, u.mobilePhone||'', lic, estado].map(csvVal).join(',');
+  }).join('\n');
+
+  const blob = new Blob([bom + header + rows], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `usuarios-m365-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function toggleUser(uid, upn, enabled) {
+  load(enabled ? 'Activando cuenta...' : 'Desactivando cuenta...');
+  const res = await window.api.toggleUser({ cfg, userId: uid, enabled, upn });
+  unload();
+  if (res.ok) filterUsers();
+  else alert('Error: ' + res.error);
+}
+
+// ════════════════════════════════════════════════
+// Dialog editar
+// ════════════════════════════════════════════════
+function openEdit(uid, upn, phone) {
+  document.getElementById('edit-uid').value   = uid;
+  document.getElementById('edit-upn').value   = upn;
+  document.getElementById('edit-phone').value = phone;
+  document.getElementById('edit-sku').value   = '';
+  document.getElementById('dlg-edit').classList.add('show');
+}
+function closeDlg() { document.getElementById('dlg-edit').classList.remove('show'); }
+async function saveEdit() {
+  const uid   = document.getElementById('edit-uid').value;
+  const upn   = document.getElementById('edit-upn').value;
+  const phone = document.getElementById('edit-phone').value.trim();
+  const sku   = document.getElementById('edit-sku').value;
+  closeDlg(); load('Actualizando usuario...');
+  if (phone) await window.api.updatePhone({ cfg, userId: uid, phone, upn });
+  if (sku)   await window.api.assignLicense({ cfg, userId: uid, skuId: sku, upn });
+  unload(); loadUsers();
+}
+
+// ════════════════════════════════════════════════
+// Importar CSV
+// ════════════════════════════════════════════════
+
+// ── Parsear CSV robusto (maneja comillas y comas dentro de campos)
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { headers: [], rows: [] };
+
+  function parseLine(line) {
+    const result = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else { inQ = !inQ; } }
+      else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/^\uFEFF/, '').trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i]);
+    if (vals.every(v => !v)) continue; // skip empty rows
+    const row = { _fila: i };
+    headers.forEach((h, idx) => { row[h] = (vals[idx] || '').replace(/^"|"$/g, '').trim(); });
+    rows.push(row);
+  }
+  return { headers, rows };
+}
+
+async function selectCsvFile() {
+  const res = await window.api.openCsvDialog();
+  if (!res.ok) return;
+  processCsvContent(res.content, res.filePath.split(/[\\/]/).pop());
+}
+
+function processCsvContent(text, fileName) {
+  const { rows } = parseCSV(text);
+  if (!rows.length) { msgbar('msg-import','error','El archivo CSV está vacío o no tiene el formato correcto.'); return; }
+  csvRows = rows;
+  clearMsg('msg-import');
+  document.getElementById('csv-file-name').textContent   = fileName || '';
+  document.getElementById('csv-row-count').textContent   = rows.length;
+  document.getElementById('csv-preview-section').style.display = '';
+  document.getElementById('csv-sku-wrap').style.display         = '';
+  document.getElementById('csv-results-section').style.display  = 'none';
+  document.getElementById('dz-title').textContent = fileName || 'Archivo cargado';
+  document.getElementById('dz-sub').textContent   = `${rows.length} filas encontradas — haga clic para cambiar el archivo`;
+  document.getElementById('btn-run-csv').disabled = false;
+  renderCsvPreview(rows);
+}
+
+function renderCsvPreview(rows) {
+  const body = document.getElementById('csv-preview-body');
+  body.innerHTML = rows.map(r => {
+    const accion  = (r.accion || '').toLowerCase();
+    const badgeClass = `badge csv-badge-${accion}` + (!['crear','editar','desactivar','activar'].includes(accion) ? ' badge-error' : '');
+    const nombres   = accion === 'crear' ? esc(r.nombres   || '—') : '—';
+    const apellidos = accion === 'crear' ? esc(r.apellidos || '—') : '—';
+    const destino   = accion === 'crear' ? esc((r.dominio||cfg.defaultDomain||'').replace(/^@/,'')) : `<span class="font-mono">${esc(r.upn_existente||'')}</span>`;
+    const tipo      = accion === 'crear' ? `<span class="badge badge-neutral">${esc(r.tipo||'otro')}</span>` : '—';
+    return `<tr>
+      <td style="color:var(--gray-60);font-size:12px;">${r._fila}</td>
+      <td><span class="badge ${badgeClass}">${esc(accion||'?')}</span></td>
+      <td>${tipo}</td>
+      <td>${nombres}</td>
+      <td>${apellidos}</td>
+      <td>${destino}</td>
+      <td class="font-mono">${esc(r.telefono||'—')}</td>
+      <td class="font-mono">${esc(r.cedula||'—')}</td>
+      <td class="font-mono" style="font-size:11px;">${esc(r.mailpersonal||'—')}</td>
+      <td style="font-size:11px;">${esc(r.observacion||'—')}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function runCsvImport() {
+  if (!csvRows.length) return;
+  if (!cfg.tenantId)  { msgbar('msg-import','error','Configure las credenciales de Azure antes de importar.'); return; }
+
+  const defaultSku = document.getElementById('csv-default-sku').value;
+  load(`Procesando ${csvRows.length} filas...`);
+
+  const res = await window.api.processCsv({ cfg, rows: csvRows, skuId: defaultSku });
+  unload();
+
+  if (!res.ok) { msgbar('msg-import','error',`Error: ${res.error}`); return; }
+
+  const results  = res.results;
+  const ok       = results.filter(r => r.estado === 'éxito').length;
+  const errCount = results.filter(r => r.estado === 'error').length;
+
+  document.getElementById('result-summary').innerHTML = `
+    <span class="result-chip" style="background:var(--success-bg);color:#0b6a0b;">Éxito: ${ok}</span>
+    <span class="result-chip" style="background:var(--error-bg);color:#8e1a1f;">Error: ${errCount}</span>
+    <span class="result-chip" style="background:var(--gray-6);color:var(--gray-60);">Total: ${results.length}</span>
+  `;
+
+  document.getElementById('results-body').innerHTML = results.map(r => {
+    const cls    = r.estado === 'éxito' ? 'result-row-ok' : 'result-row-error';
+    const badge  = r.estado === 'éxito'
+      ? '<span class="badge badge-success">Éxito</span>'
+      : '<span class="badge badge-error">Error</span>';
+    const accBadge = `<span class="badge csv-badge-${r.accion}">${esc(r.accion)}</span>`;
+    return `<tr class="${cls}">
+      <td style="color:var(--gray-60);font-size:12px;">${r.fila}</td>
+      <td>${accBadge}</td>
+      <td class="font-mono">${esc(r.upn||'—')}</td>
+      <td>${badge}</td>
+      <td style="font-size:12px;">${esc(r.detalle)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('csv-results-section').style.display = '';
+  document.getElementById('csv-results-section').scrollIntoView({ behavior: 'smooth' });
+
+  if (errCount === 0) msgbar('msg-import','success',`Importación completada: ${ok} operaciones exitosas.`);
+  else msgbar('msg-import','info',`Importación finalizada: ${ok} éxito, ${errCount} con error. Revise los resultados.`);
+
+  await loadDashboard();
+}
+
+function clearCsvImport() {
+  csvRows = [];
+  document.getElementById('csv-preview-section').style.display  = 'none';
+  document.getElementById('csv-results-section').style.display  = 'none';
+  document.getElementById('csv-sku-wrap').style.display          = 'none';
+  document.getElementById('btn-run-csv').disabled = true;
+  document.getElementById('dz-title').textContent = 'Haga clic para seleccionar un archivo CSV';
+  document.getElementById('dz-sub').textContent   = 'O arrastre y suelte el archivo aquí';
+  clearMsg('msg-import');
+}
+
+function toggleEjemploCsv() {
+  const wrap = document.getElementById('csv-ejemplo-wrap');
+  const btn  = document.getElementById('btn-ver-ejemplo');
+  const visible = wrap.style.display !== 'none';
+  wrap.style.display = visible ? 'none' : 'block';
+  btn.textContent    = visible ? 'Ver ejemplo' : 'Ocultar ejemplo';
+}
+
+// Drag & drop
+function onDragOver(e)  { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.name.endsWith('.csv')) { msgbar('msg-import','error','Solo se aceptan archivos con extensión .csv'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => processCsvContent(ev.target.result, file.name);
+  reader.readAsText(file, 'utf-8');
+}
+
+// ════════════════════════════════════════════════
+// Configuración
+// ════════════════════════════════════════════════
+// ── Generador de contraseñas aleatorias ──────────────────────────────────────
+function generatePassword() {
+  const len     = parseInt(cfg.pwLength  || 12);
+  const upper   = cfg.pwUpper   !== false;
+  const lower   = cfg.pwLower   !== false;
+  const numbers = cfg.pwNumbers !== false;
+  const symbols = cfg.pwSymbols !== false;
+
+  const UPPER   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const LOWER   = 'abcdefghijklmnopqrstuvwxyz';
+  const NUMS    = '0123456789';
+  const SYMS    = '!@#$%&*+-=?';
+
+  let pool = '';
+  let required = [];
+  if (upper)   { pool += UPPER;   required.push(UPPER[Math.floor(Math.random()*UPPER.length)]); }
+  if (lower)   { pool += LOWER;   required.push(LOWER[Math.floor(Math.random()*LOWER.length)]); }
+  if (numbers) { pool += NUMS;    required.push(NUMS[Math.floor(Math.random()*NUMS.length)]); }
+  if (symbols) { pool += SYMS;    required.push(SYMS[Math.floor(Math.random()*SYMS.length)]); }
+
+  if (!pool) pool = LOWER + NUMS; // fallback mínimo
+
+  let password = [...required];
+  while (password.length < len) {
+    password.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  // Mezclar
+  for (let i = password.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [password[i], password[j]] = [password[j], password[i]];
+  }
+  return password.join('');
+}
+
+function refreshPassword() {
+  const pw = generatePassword();
+  document.getElementById('f-pass').value        = pw;
+  const display = document.getElementById('f-pass-display');
+  if (display) display.textContent = pw;
+}
+
+function previewPassword() {
+  const pw = generatePassword();
+  const el = document.getElementById('pw-preview');
+  if (el) el.textContent = pw;
+}
+
+function cfgTab(btn, panelId) {
+  document.querySelectorAll('.pivot-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.pivot-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+function loadConfigForm() {
+  document.getElementById('cfg-tid').value    = cfg.tenantId      || '';
+  document.getElementById('cfg-cid').value    = cfg.clientId      || '';
+  document.getElementById('cfg-sec').value    = cfg.clientSecret  || '';
+  document.getElementById('cfg-dom').value    = cfg.defaultDomain || '@escuela.org';
+  document.getElementById('cfg-city').value   = cfg.city          || 'CUNDINAMARCA';
+  document.getElementById('cfg-country').value= cfg.country       || 'COLOMBIA';
+  document.getElementById('cfg-usage').value  = cfg.usageLocation || 'CO';
+  document.getElementById('cfg-dept').value   = cfg.department    || 'ACADEMICA';
+  document.getElementById('cfg-office').value = cfg.office        || 'ESCUELA';
+  document.getElementById('cfg-phone').value  = cfg.phoneNumber   || '(+57) 6019999999';
+  document.getElementById('cfg-postal').value = cfg.postalCode    || '111711';
+  document.getElementById('cfg-state').value  = cfg.state         || 'BOGOTA D.C.';
+  document.getElementById('cfg-street').value  = cfg.streetAddress || 'CALLE 99 No. 99-99';
+  document.getElementById('cfg-prefix').value  = cfg.phonePrefix   || '+57';
+  const dom = cfg.defaultDomain || '@escuela.org';
+  if (dom) document.getElementById('f-domain').value = dom.replace(/^@/, '');
+  // Contraseña
+  document.getElementById('cfg-pw-len').value   = cfg.pwLength  || 12;
+  document.getElementById('cfg-pw-upper').value = cfg.pwUpper   != null ? String(Number(cfg.pwUpper))   : '1';
+  document.getElementById('cfg-pw-lower').value = cfg.pwLower   != null ? String(Number(cfg.pwLower))   : '1';
+  document.getElementById('cfg-pw-num').value   = cfg.pwNumbers != null ? String(Number(cfg.pwNumbers)) : '1';
+  document.getElementById('cfg-pw-sym').value   = cfg.pwSymbols != null ? String(Number(cfg.pwSymbols)) : '1';
+  // Cargar SKUs en los select de configuración y en f-sku hidden
+  populateLicSelects();
+  // Generar contraseña inicial
+  refreshPassword();
+}
+
+async function saveConfig() {
+  const rawDomain = document.getElementById('cfg-dom').value.trim();
+  cfg = {
+    tenantId:      document.getElementById('cfg-tid').value.trim(),
+    clientId:      document.getElementById('cfg-cid').value.trim(),
+    clientSecret:  document.getElementById('cfg-sec').value.trim(),
+    defaultDomain: rawDomain,
+    city:          document.getElementById('cfg-city').value.trim(),
+    country:       document.getElementById('cfg-country').value.trim(),
+    usageLocation: document.getElementById('cfg-usage').value.trim().toUpperCase(),
+    department:    document.getElementById('cfg-dept').value.trim(),
+    office:        document.getElementById('cfg-office').value.trim(),
+    phoneNumber:   document.getElementById('cfg-phone').value.trim(),
+    postalCode:    document.getElementById('cfg-postal').value.trim(),
+    state:         document.getElementById('cfg-state').value.trim(),
+    streetAddress: document.getElementById('cfg-street').value.trim(),
+    phonePrefix:   document.getElementById('cfg-prefix').value.trim() || '+57',
+    // Licencias por tipo
+    skuMaestro:    document.getElementById('cfg-sku-maestro')?.value    || '',
+    skuEstudiante: document.getElementById('cfg-sku-estudiante')?.value || '',
+    skuOtro:       document.getElementById('cfg-sku-otro')?.value       || '',
+    // Parámetros de contraseña
+    pwLength:      parseInt(document.getElementById('cfg-pw-len').value) || 12,
+    pwUpper:       document.getElementById('cfg-pw-upper').value === '1',
+    pwLower:       document.getElementById('cfg-pw-lower').value === '1',
+    pwNumbers:     document.getElementById('cfg-pw-num').value   === '1',
+    pwSymbols:     document.getElementById('cfg-pw-sym').value   === '1',
+  };
+  await window.api.saveConfig(cfg);
+  document.getElementById('f-domain').value = rawDomain.replace(/^@/, '');
+  msgbar('msg-config','success','Configuración guardada correctamente.');
+}
+
+async function testConnection() {
+  if (!cfg.tenantId) { msgbar('msg-config','error','Guarde la configuración antes de probar la conexión.'); return; }
+  load('Verificando conexión con Microsoft Graph...');
+  const res = await window.api.getLicenses(cfg);
+  unload();
+  if (res.ok) { setStatus('ok'); msgbar('msg-config','success',`Conexión establecida. Se encontraron ${res.data.length} SKU(s) en el tenant.`); }
+  else        { setStatus('err'); msgbar('msg-config','error',`Error de conexión: ${res.error}`); }
+}
+
+// ════════════════════════════════════════════════
+// Registro
+// ════════════════════════════════════════════════
+async function refreshLog() {
+  const txt = await window.api.getLog();
+  const el  = document.getElementById('log-content');
+  if (!txt) { el.innerHTML = '<span class="log-muted">// Sin registros.</span>'; return; }
+  el.innerHTML = txt.split('\n').filter(Boolean).map(l => {
+    const s = esc(l);
+    if (l.includes('CSV') || l.includes('CREAR'))   return `<span class="log-create">${s}</span>`;
+    if (l.includes('ERROR'))                         return `<span class="log-error">${s}</span>`;
+    if (l.match(/ACTIVAR|INACTIVAR|ACTUALIZAR|ASIGNAR/)) return `<span class="log-toggle">${s}</span>`;
+    return `<span class="log-muted">${s}</span>`;
+  }).join('\n');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function downloadLog() {
+  const res = await window.api.downloadLog();
+  if (res.saved) alert('Registro guardado en:\n' + res.path);
+}
+
+async function clearLog() {
+  if (!confirm('Se eliminará todo el historial de actividad. ¿Desea continuar?')) return;
+  await window.api.clearLog();
+  refreshLog();
+}
+
+// ════════════════════════════════════════════════
+// Arranque
+// ════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
