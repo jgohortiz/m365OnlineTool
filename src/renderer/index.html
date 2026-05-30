@@ -62,7 +62,7 @@ body {
 .tb-btn svg { width: 10px; height: 10px; }
 
 /* ── Shell ── */
-#shell { display: flex; flex: 1; overflow: hidden; }
+#shell { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
 /* ── Nav ── */
 #nav { width: var(--nav-width); background: var(--nav-bg); border-right: 1px solid var(--gray-10); display: flex; flex-direction: column; flex-shrink: 0; padding: 4px 0; }
@@ -81,8 +81,8 @@ body {
 .status-dot.err { background: var(--error); }
 
 /* ── Content ── */
-#content { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: var(--white); }
-.page { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
+#content { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: var(--white); min-height: 0; min-width: 0; }
+.page { display: none; flex: 1; overflow-y: auto; flex-direction: column; min-height: 0; }
 .page.active { display: flex; }
 
 /* ── Page header ── */
@@ -207,6 +207,7 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
 .csv-badge-crear       { background: #dff6dd; color: #0b6a0b; }
 .csv-badge-editar      { background: var(--info-bg); color: var(--ms-blue-darker); }
 .csv-badge-desactivar  { background: var(--error-bg); color: #8e1a1f; }
+.csv-badge-eliminar    { background: #3b0000; color: #ff8080; }
 .csv-badge-activar     { background: var(--warning-bg); color: #4a3800; }
 .csv-badge-error       { background: var(--error-bg); color: #8e1a1f; }
 .result-row-error td   { background: #fff5f5; }
@@ -248,6 +249,10 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
   box-sizing: border-box;
 }
 .col-filter:focus { border-color: var(--ms-blue); }
+.th-sortable .col-filter, .th-sortable .col-filter-select { user-select: text; cursor: text; }
+.th-sortable .col-filter-select { cursor: pointer; }
+/* Wrapper div to capture and stop all events from filter row */
+.col-filter-wrap { pointer-events: auto; }
 .col-filter-select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23605e5c'/%3E%3C/svg%3E");
@@ -256,11 +261,7 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
   padding-right: 18px;
   cursor: pointer;
 }
-.users-wrap {
-  flex: 1;
-  overflow: auto;
-  padding: 10px 10px 10px 10px;
-}
+
 
 /* ── Pestañas (Fluent Pivot) ── */
 .pivot { display: flex; border-bottom: 1px solid var(--gray-10); margin-bottom: 20px; gap: 0; }
@@ -287,10 +288,11 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
 .font-mono { font-family: 'Consolas', monospace; font-size: 12.5px; color: var(--gray-60); }
 .empty-state { padding: 48px 20px; text-align: center; color: var(--gray-60); font-size: 13px; }
 .empty-state strong { display: block; font-size: 15px; font-weight: 600; color: var(--gray-80); margin-bottom: 6px; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--gray-20); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--gray-30); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--gray-4); border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: var(--gray-30); border-radius: 5px; border: 2px solid var(--gray-4); }
+::-webkit-scrollbar-thumb:hover { background: var(--gray-60); }
+::-webkit-scrollbar-corner { background: var(--gray-4); }
 </style>
 </head>
 <body>
@@ -328,7 +330,11 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
     </div>
     <div class="nav-item" data-page="import" onclick="nav(this)">
       <span class="nav-icon"><svg viewBox="0 0 20 20"><path d="M10 2l6 6h-4v6H8V8H4l6-6zm-7 14h14v2H3v-2z"/></svg></span>
-      Importar CSV
+      Acciones masivas
+    </div>
+    <div class="nav-item" data-page="notif" onclick="nav(this)">
+      <span class="nav-icon"><svg viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v4l-2 2v1h16v-1l-2-2V8a6 6 0 00-6-6zm0 16a2 2 0 002-2H8a2 2 0 002 2z"/></svg></span>
+      Notificaciones
     </div>
     <div class="nav-separator"></div>
     <div class="nav-header">Sistema</div>
@@ -453,21 +459,24 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
         <div class="cmd-spacer"></div>
         <span id="users-count-label" style="font-size:12px;color:var(--gray-60);white-space:nowrap;"></span>
       </div>
-      <div class="users-wrap">
+      <div id="msg-users" style="padding:0 28px;"></div>
+      <div class="page-body" style="overflow:auto;flex:1;">
+        <div class="card" style="padding:0;overflow:hidden;min-width:0;">
+          <div class="table-outer" style="overflow-x:auto;">
         <table class="details-list" id="users-table">
           <thead>
             <tr>
               <th class="th-sortable" data-col="displayName" onclick="sortUsers(this)">
                 Nombre completo <span class="th-sort-icon">&#8597;</span>
-                <div><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-nombre" onclick="event.stopPropagation()"/></div>
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-nombre"/></div>
               </th>
               <th class="th-sortable" data-col="userPrincipalName" onclick="sortUsers(this)">
                 Usuario (UPN) <span class="th-sort-icon">&#8597;</span>
-                <div><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-upn" onclick="event.stopPropagation()"/></div>
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-upn"/></div>
               </th>
               <th class="th-sortable" data-col="tipo" onclick="sortUsers(this)">
                 Tipo <span class="th-sort-icon">&#8597;</span>
-                <div><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-tipo" onclick="event.stopPropagation()">
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-tipo">
                   <option value="">Todos</option>
                   <option value="maestro">Maestro</option>
                   <option value="estudiante">Estudiante</option>
@@ -476,11 +485,11 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
               </th>
               <th class="th-sortable" data-col="mobilePhone" onclick="sortUsers(this)">
                 Teléfono <span class="th-sort-icon">&#8597;</span>
-                <div><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-tel" onclick="event.stopPropagation()"/></div>
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-tel"/></div>
               </th>
               <th class="th-sortable" data-col="licencia" onclick="sortUsers(this)">
                 Licencia <span class="th-sort-icon">&#8597;</span>
-                <div><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-lic" onclick="event.stopPropagation()">
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-lic">
                   <option value="">Todos</option>
                   <option value="1">Con licencia</option>
                   <option value="0">Sin licencia</option>
@@ -488,27 +497,45 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
               </th>
               <th class="th-sortable" data-col="accountEnabled" onclick="sortUsers(this)">
                 Estado <span class="th-sort-icon">&#8597;</span>
-                <div><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-estado" onclick="event.stopPropagation()">
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><select class="col-filter col-filter-select" onchange="filterUsers()" id="cf-estado">
                   <option value="">Todos</option>
                   <option value="1">Activo</option>
                   <option value="0">Inactivo</option>
                 </select></div>
               </th>
+              <th class="th-sortable" data-col="createdDateTime" onclick="sortUsers(this)">
+                Creación <span class="th-sort-icon">&#8597;</span>
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><input class="col-filter" type="text" placeholder="aaaa-mm-dd..." oninput="filterUsers()" id="cf-created"/></div>
+              </th>
+              <th class="th-sortable" data-col="attr1" onclick="sortUsers(this)">
+                Lote (CA1) <span class="th-sort-icon">&#8597;</span>
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-attr1"/></div>
+              </th>
+              <th class="th-sortable" data-col="attr2" onclick="sortUsers(this)">
+                Cédula (CA2) <span class="th-sort-icon">&#8597;</span>
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-attr2"/></div>
+              </th>
+              <th class="th-sortable" data-col="attr3" onclick="sortUsers(this)">
+                Correo personal (CA3) <span class="th-sort-icon">&#8597;</span>
+                <div onclick="event.stopPropagation()" onmousedown="event.stopPropagation()"><input class="col-filter" type="text" placeholder="Filtrar..." oninput="filterUsers()" id="cf-attr3"/></div>
+              </th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="users-body">
-            <tr><td colspan="7"><div class="empty-state"><strong>Sin datos</strong>Haga clic en Actualizar lista o configure las credenciales.</div></td></tr>
+            <tr><td colspan="10"><div class="empty-state"><strong>Sin datos</strong>Haga clic en Actualizar lista o configure las credenciales.</div></td></tr>
           </tbody>
         </table>
-      </div>
+          </div><!-- /table-outer -->
+        </div><!-- /card -->
+      </div><!-- /page-body -->
     </div>
 
     <!-- ═══ IMPORTAR CSV ═══ -->
     <div class="page" id="page-import">
       <div class="page-header">
         <div class="page-breadcrumb">m365OnlineTool</div>
-        <div class="page-title">Importar CSV</div>
+        <div class="page-title">Acciones masivas</div>
       </div>
       <div class="command-bar">
         <button class="cmd-btn primary" id="btn-run-csv" onclick="runCsvImport()" disabled>
@@ -541,14 +568,55 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
             </div>
             <div id="csv-ejemplo-wrap" style="display:none;margin-top:14px;overflow-x:auto;">
               <table class="details-list" style="font-size:12px;">
-                <thead><tr><th>accion</th><th>tipo</th><th>nombres</th><th>apellidos</th><th>dominio</th><th>telefono</th><th>contrasena</th><th>skuId</th><th>upn_existente</th><th>cedula</th><th>mailpersonal</th><th>observacion</th></tr></thead>
+                <thead><tr>
+                  <th>accion</th><th>tipo</th><th>nombres</th><th>apellidos</th>
+                  <th>telefono</th><th>cuenta_institucional</th>
+                  <th>cedula</th><th>mailpersonal</th><th>observacion</th>
+                </tr></thead>
                 <tbody>
-                  <tr><td><span class="badge csv-badge-crear">crear</span></td><td>maestro / estudiante / otro</td><td>John</td><td>Doe</td><td>escuela.org</td><td>+57 3001234567</td><td>Cambiar2024!</td><td>(opcional)</td><td>(vacío)</td><td>10000001</td><td>john.doe@correo.com</td><td>Ejemplo maestro</td></tr>
-                  <tr><td><span class="badge csv-badge-editar">editar</span></td><td>(vacío)</td><td>(vacío)</td><td>(vacío)</td><td>(vacío)</td><td>+57 3001111111</td><td>(vacío)</td><td>(vacío)</td><td>m.jdoe@escuela.org</td><td>(opcional)</td><td>(opcional)</td><td>(opcional)</td></tr>
-                  <tr><td><span class="badge csv-badge-desactivar">desactivar</span></td><td colspan="7">(vacío)</td><td>e.jdoe@escuela.org</td><td>(vacío)</td><td>(vacío)</td><td>(vacío)</td></tr>
-                  <tr><td><span class="badge badge-warn">activar</span></td><td colspan="7">(vacío)</td><td>adoe@escuela.org</td><td>(vacío)</td><td>(vacío)</td><td>(vacío)</td></tr>
+                  <tr>
+                    <td><span class="badge csv-badge-crear">crear</span></td>
+                    <td>maestro / estudiante / otro</td>
+                    <td>John</td><td>Doe</td>
+                    <td>+57 3001234567</td>
+                    <td style="color:var(--gray-30);font-style:italic;">(vacío — se genera)</td>
+                    <td>10000001</td><td>john.doe@correo.com</td><td>Ejemplo maestro</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge csv-badge-editar">editar</span></td>
+                    <td style="color:var(--gray-30);">-</td>
+                    <td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td>
+                    <td>+57 3001111111</td>
+                    <td>m.jdoe@escuela.org</td>
+                    <td>(opcional)</td><td>(opcional)</td><td>Actualizar teléfono</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge csv-badge-desactivar">desactivar</span></td>
+                    <td style="color:var(--gray-30);">-</td>
+                    <td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td>
+                    <td style="color:var(--gray-30);">-</td>
+                    <td>e.jdoe@escuela.org</td>
+                    <td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge badge-warn">activar</span></td>
+                    <td style="color:var(--gray-30);">-</td>
+                    <td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td>
+                    <td style="color:var(--gray-30);">-</td>
+                    <td>adoe@escuela.org</td>
+                    <td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge csv-badge-eliminar">eliminar</span></td>
+                    <td style="color:var(--gray-30);">-</td>
+                    <td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td>
+                    <td style="color:var(--gray-30);">-</td>
+                    <td>m.jdoe@escuela.org</td>
+                    <td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td><td style="color:var(--gray-30);">-</td>
+                  </tr>
                 </tbody>
               </table>
+              <p style="font-size:11px;color:var(--gray-60);margin-top:8px;">El dominio, la contraseña y el SKU de licencia se toman automáticamente de la Configuración. Los campos marcados con - se dejan vacíos en el archivo.</p>
             </div>
           </div>
         </div>
@@ -559,18 +627,6 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
           <div class="drop-zone-sub" id="dz-sub">O arrastre y suelte el archivo aquí</div>
         </div>
 
-        <!-- Licencia por defecto para creaciones -->
-        <div id="csv-sku-wrap" style="display:none;margin-bottom:14px;">
-          <div class="card">
-            <div class="card-header">Licencia predeterminada para cuentas nuevas</div>
-            <div class="card-body">
-              <div class="form-group" style="max-width:480px;">
-                <label>Licencia A1 (se aplica a las filas de acción "crear" que no especifiquen skuId)</label>
-                <select id="csv-default-sku"><option value="">— Sin licencia predeterminada —</option></select>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <!-- Vista previa del CSV -->
         <div id="csv-preview-section" style="display:none;">
@@ -581,7 +637,7 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
             </div>
             <div class="csv-preview-wrap">
               <table class="details-list" id="csv-preview-table">
-                <thead><tr><th>#</th><th>Acción</th><th>Tipo</th><th>Nombres</th><th>Apellidos</th><th>Dominio / UPN existente</th><th>Teléfono</th><th>Cédula</th><th>Correo personal</th><th>Observación</th></tr></thead>
+                <thead><tr><th>#</th><th>Acción</th><th>Tipo</th><th>Nombres</th><th>Apellidos</th><th>Teléfono</th><th>Cuenta institucional</th><th>Cédula</th><th>Correo personal</th><th>Observación</th></tr></thead>
                 <tbody id="csv-preview-body"></tbody>
               </table>
             </div>
@@ -591,14 +647,211 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
         <!-- Resultados -->
         <div id="csv-results-section" style="display:none;margin-top:16px;">
           <div class="card" style="padding:0;overflow:hidden;">
-            <div class="card-header">Resultados de la importación</div>
-            <div class="card-body" style="padding:12px 16px 8px;">
+            <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <span>Resultados de la importación</span>
+              <button class="cmd-btn" onclick="exportResultsCSV()" style="font-size:12px;padding:4px 10px;">
+                <svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:currentColor;"><path d="M8 12l-5-5 1-1 3.5 3.5V2h1.5v7.5L12 6l1 1-5 5zM2 14h12v1.5H2V14z"/></svg>
+                Exportar CSV
+              </button>
+            </div>
+            <div class="card-body" style="padding:10px 16px 8px;">
               <div class="result-summary" id="result-summary"></div>
             </div>
             <div style="overflow-x:auto;">
-              <table class="details-list" id="results-table">
-                <thead><tr><th>Fila</th><th>Acción</th><th>Usuario (UPN)</th><th>Estado</th><th>Detalle</th></tr></thead>
+              <table class="details-list" id="results-table" style="font-size:12px;">
+                <thead>
+                  <tr>
+                    <th>Lote</th><th>Cedula</th><th>Nombres</th><th>Apellidos</th>
+                    <th>Email personal</th><th>Alias</th><th>Celular</th>
+                    <th>Estado</th><th>Email institucional</th><th>Nombre completo</th>
+                    <th>Tipo</th><th>Id</th><th>Creado</th><th>Estado cuenta</th>
+                    <th>Observacion</th>
+                  </tr>
+                </thead>
                 <tbody id="results-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ═══ NOTIFICACIONES ═══ -->
+    <div class="page" id="page-notif">
+      <div class="page-header">
+        <div class="page-breadcrumb">m365OnlineTool</div>
+        <div class="page-title">Notificaciones</div>
+      </div>
+      <div class="command-bar">
+        <button class="cmd-btn primary" id="btn-send-notif" onclick="sendNotifications()" disabled>
+          <svg viewBox="0 0 16 16"><path d="M1 1l14 7-14 7V9l10-2L1 5V1z" fill="white"/></svg>
+          Enviar notificaciones
+        </button>
+        <button class="cmd-btn" onclick="loadNotifCsv()">
+          <svg viewBox="0 0 16 16"><path d="M13 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1z"/></svg>
+          Seleccionar CSV
+        </button>
+        <button class="cmd-btn" onclick="refreshTemplates()">
+          <svg viewBox="0 0 16 16"><path d="M14 8A6 6 0 112 8a6 6 0 0112 0zM8 3v5h3v1H7V3h1z"/></svg>
+          Actualizar plantillas
+        </button>
+        <button class="cmd-btn" onclick="window.api.openTemplatesFolder()">
+          <svg viewBox="0 0 16 16"><path d="M1 3h6l2 2h6v9H1V3z"/></svg>
+          Abrir carpeta plantillas
+        </button>
+        <button class="cmd-btn" onclick="window.api.downloadNotifTemplate()">
+          <svg viewBox="0 0 16 16"><path d="M8 12l-5-5 1-1 3.5 3.5V2h1.5v7.5L12 6l1 1-5 5zM2 14h12v1.5H2V14z"/></svg>
+          Descargar plantilla HTML
+        </button>
+        <button class="cmd-btn" onclick="window.api.downloadNotifCsvTemplate()">
+          <svg viewBox="0 0 16 16"><path d="M8 12l-5-5 1-1 3.5 3.5V2h1.5v7.5L12 6l1 1-5 5zM2 14h12v1.5H2V14z"/></svg>
+          Descargar plantilla CSV
+        </button>
+        <div class="cmd-spacer"></div>
+        <span id="notif-count-label" style="font-size:12px;color:var(--gray-60);white-space:nowrap;"></span>
+      </div>
+      <div class="page-body">
+        <div id="msg-notif"></div>
+
+        <!-- Credenciales de envío (solo clave + campo destino) -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header">Credenciales de envío</div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--gray-60);margin-bottom:14px;line-height:1.6;">
+              Remitente: <strong id="notif-user-label" style="color:var(--gray-90);">—</strong>
+              &nbsp;·&nbsp; Servidor: <strong id="notif-host-label" style="color:var(--gray-90);">—</strong>
+              &nbsp;·&nbsp; Puerto: <strong id="notif-port-label" style="color:var(--gray-90);">—</strong>
+              &nbsp;&nbsp;<a onclick="nav(document.querySelector('[data-page=config]'))" style="color:var(--ms-blue);cursor:pointer;font-size:12px;">Cambiar en Configuración</a>
+            </p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Contraseña del remitente <span class="req">*</span></label>
+                <input type="password" id="notif-pass" placeholder="Contraseña — no se guarda en disco"/>
+              </div>
+              <div class="form-group">
+                <label>Enviar al campo del CSV</label>
+                <select id="notif-dest-field" onchange="saveNotifDestField()">
+                  <option value="email_personal">email_personal</option>
+                  <option value="email_institucional">email_institucional</option>
+                  <option value="cedula">cedula</option>
+                  <option value="alias">alias</option>
+                </select>
+                <span class="field-hint">Columna del CSV que se usa como dirección de destino</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plantilla y CSV -->
+        <div class="form-grid" style="margin-bottom:14px;gap:14px;">
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header">Plantilla HTML</div>
+            <div class="card-body">
+              <div class="form-group" style="margin-bottom:10px;">
+                <label>Seleccionar plantilla</label>
+                <select id="notif-template" onchange="onTemplateChange()">
+                  <option value="">— Seleccione una plantilla —</option>
+                </select>
+                <span class="field-hint">Archivos .html en la carpeta <code>plantillas/</code></span>
+              </div>
+              <div class="form-group">
+                <label>Asunto del mensaje</label>
+                <input type="text" id="notif-subject" placeholder="Se completa automáticamente con el nombre de la plantilla"/>
+              </div>
+
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header">Archivo CSV de destinatarios</div>
+            <div class="card-body">
+              <div class="drop-zone" id="notif-drop-zone" style="padding:20px 14px;margin-bottom:0;"
+                   onclick="loadNotifCsv()"
+                   ondragover="onNotifDragOver(event)" ondragleave="onNotifDragLeave(event)" ondrop="onNotifDrop(event)">
+                <div class="drop-zone-title" id="notif-dz-title">Haga clic para seleccionar el CSV</div>
+                <div class="drop-zone-sub" id="notif-dz-sub">Formato: Lote, Cedula, Nombres, Apellidos, Email personal...</div>
+              </div>
+              <div id="notif-csv-info" style="display:none;margin-top:10px;font-size:12px;color:var(--gray-60);">
+                <span id="notif-csv-rows"></span> destinatarios cargados —
+                <span id="notif-csv-emails"></span> con valor en el campo seleccionado
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de destinatarios importados -->
+        <div id="notif-csv-table-section" style="display:none;margin-bottom:14px;">
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <span id="notif-csv-table-title">Destinatarios cargados</span>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" id="notif-csv-search" placeholder="Buscar..." oninput="filterNotifTable()"
+                       style="padding:4px 10px;font-size:12px;border:1px solid var(--gray-20);border-radius:2px;outline:none;width:200px;"/>
+              </div>
+            </div>
+            <div style="overflow-x:auto;max-height:340px;overflow-y:auto;">
+              <table class="details-list" style="font-size:12px;">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Nombre completo</th>
+                    <th>Cedula</th>
+                    <th>Email personal</th>
+                    <th>Email institucional</th>
+                    <th>Alias</th>
+                    <th>Celular</th>
+                    <th>Tipo</th>
+                    <th>Estado cuenta</th>
+                    <th>Lote</th>
+                    <th>Observacion</th>
+                  </tr>
+                </thead>
+                <tbody id="notif-csv-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+                <!-- Tabla de variables disponibles -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Variables disponibles en la plantilla</span>
+            <button class="cmd-btn" style="font-size:11px;padding:3px 8px;" onclick="toggleVarsTable()">Mostrar/ocultar</button>
+          </div>
+          <div id="vars-table-wrap" style="display:none;padding:12px 16px;">
+            <p style="font-size:12px;color:var(--gray-60);margin-bottom:10px;">
+              Use estas variables en su plantilla HTML con el formato <code style="background:var(--gray-4);padding:1px 5px;border-radius:2px;">{{Variable}}</code>,
+              <code style="background:var(--gray-4);padding:1px 5px;border-radius:2px;">{Variable}</code> o
+              <code style="background:var(--gray-4);padding:1px 5px;border-radius:2px;">[Variable]</code>
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="vars-chips"></div>
+          </div>
+        </div>
+
+        <!-- Resultados del envío -->
+        <div id="notif-results-section" style="display:none;">
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <span>Resultados del envío</span>
+              <button class="cmd-btn" onclick="exportNotifResults()" style="font-size:12px;padding:4px 10px;">
+                <svg viewBox="0 0 16 16" style="width:13px;height:13px;fill:currentColor;"><path d="M8 12l-5-5 1-1 3.5 3.5V2h1.5v7.5L12 6l1 1-5 5zM2 14h12v1.5H2V14z"/></svg>
+                Exportar CSV
+              </button>
+            </div>
+            <div class="card-body" style="padding:10px 16px 8px;">
+              <div class="result-summary" id="notif-result-summary"></div>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="details-list" style="font-size:12px;">
+                <thead>
+                  <tr>
+                    <th>Destinatario</th><th>Nombre completo</th><th>Cedula</th>
+                    <th>Email personal</th><th>Alias</th><th>Lote</th>
+                    <th>Estado envio</th><th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody id="notif-results-body"></tbody>
               </table>
             </div>
           </div>
@@ -636,25 +889,66 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
         <div class="page-breadcrumb">m365OnlineTool</div>
         <div class="page-title">Configuración</div>
       </div>
-      <div class="command-bar">
+
+      <!-- Barra contextual por pestaña -->
+      <div class="command-bar" id="cfg-bar-azure">
         <button class="cmd-btn primary" onclick="saveConfig()">
           <svg viewBox="0 0 16 16"><path d="M2 2h9l3 3v9H2V2zm8 0v4H5V2h5zm2 .5V5h2.5L12 2.5zM3 9h10v5H3V9zm1 1v3h8v-3H4z" fill="white"/></svg>
-          Guardar configuración
+          Guardar
         </button>
         <button class="cmd-btn" onclick="testConnection()">
           <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.3 4.7l-4 4-2-2 1-1 1 1 3-3 1 1z"/></svg>
-          Probar conexión
+          Probar conexión Graph API
         </button>
       </div>
-      <div class="page-body" style="max-width:760px;">
+      <div class="command-bar" id="cfg-bar-org" style="display:none;">
+        <button class="cmd-btn primary" onclick="saveConfig()">
+          <svg viewBox="0 0 16 16"><path d="M2 2h9l3 3v9H2V2zm8 0v4H5V2h5zm2 .5V5h2.5L12 2.5zM3 9h10v5H3V9zm1 1v3h8v-3H4z" fill="white"/></svg>
+          Guardar
+        </button>
+      </div>
+      <div class="command-bar" id="cfg-bar-lic" style="display:none;">
+        <button class="cmd-btn primary" onclick="saveConfig()">
+          <svg viewBox="0 0 16 16"><path d="M2 2h9l3 3v9H2V2zm8 0v4H5V2h5zm2 .5V5h2.5L12 2.5zM3 9h10v5H3V9zm1 1v3h8v-3H4z" fill="white"/></svg>
+          Guardar
+        </button>
+      </div>
+      <div class="command-bar" id="cfg-bar-smtp" style="display:none;">
+        <button class="cmd-btn primary" onclick="saveConfig()">
+          <svg viewBox="0 0 16 16"><path d="M2 2h9l3 3v9H2V2zm8 0v4H5V2h5zm2 .5V5h2.5L12 2.5zM3 9h10v5H3V9zm1 1v3h8v-3H4z" fill="white"/></svg>
+          Guardar
+        </button>
+        <button class="cmd-btn" onclick="testSmtp()">
+          <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm3.3 4.7l-4 4-2-2 1-1 1 1 3-3 1 1z"/></svg>
+          Probar conexión SMTP
+        </button>
+      </div>
+      <div class="command-bar" id="cfg-bar-pwd" style="display:none;"></div>
+      <div class="command-bar" id="cfg-bar-about" style="display:none;"></div>
+
+      <div class="page-body" style="max-width:760px;overflow-y:auto;flex:1;">
         <div id="msg-config"></div>
 
         <!-- Pestañas Pivot -->
         <div class="pivot">
-          <button class="pivot-tab active" onclick="cfgTab(this,'cfg-azure')">Azure AD</button>
-          <button class="pivot-tab" onclick="cfgTab(this,'cfg-org')">Datos organizacionales</button>
-          <button class="pivot-tab" onclick="cfgTab(this,'cfg-lic')">Licencias y Contraseña</button>
-          <button class="pivot-tab" onclick="cfgTab(this,'cfg-about')">Información</button>
+          <button class="pivot-tab active" data-bar="cfg-bar-azure" onclick="cfgTab(this,'cfg-azure')">
+            Conexión API
+          </button>
+          <button class="pivot-tab" data-bar="cfg-bar-org" onclick="cfgTab(this,'cfg-org')">
+            Organización
+          </button>
+          <button class="pivot-tab" data-bar="cfg-bar-lic" onclick="cfgTab(this,'cfg-lic')">
+            Licencias
+          </button>
+          <button class="pivot-tab" data-bar="cfg-bar-smtp" onclick="cfgTab(this,'cfg-smtp')">
+            Correo saliente
+          </button>
+          <button class="pivot-tab" data-bar="cfg-bar-pwd" onclick="cfgTab(this,'cfg-pwd')">
+            Contraseña maestra
+          </button>
+          <button class="pivot-tab" data-bar="cfg-bar-about" onclick="cfgTab(this,'cfg-about')">
+            Acerca de
+          </button>
         </div>
 
         <!-- Pestaña 1: Azure AD -->
@@ -798,6 +1092,76 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
           </div>
         </div>
 
+
+        <!-- Pestaña: Correo saliente (SMTP) -->
+        <div class="pivot-panel" id="cfg-smtp">
+          <p style="font-size:13px;color:var(--gray-60);margin-bottom:16px;line-height:1.6;">
+            Credenciales de la cuenta de correo que se usa como remitente para el envío de notificaciones.
+            La contraseña <strong>no se guarda</strong> — se ingresa en la sección Notificaciones antes de cada envío.
+          </p>
+          <div class="form-grid cols3">
+            <div class="form-group">
+              <label>Servidor SMTP</label>
+              <input type="text" id="cfg-smtp-host" placeholder="smtp.office365.com"/>
+              <span class="field-hint">Microsoft 365: smtp.office365.com</span>
+            </div>
+            <div class="form-group">
+              <label>Puerto</label>
+              <input type="text" id="cfg-smtp-port" value="587"/>
+              <span class="field-hint">587 (TLS) · 465 (SSL)</span>
+            </div>
+            <div class="form-group">
+              <label>Correo remitente</label>
+              <input type="text" id="cfg-smtp-user" placeholder="notificaciones@escuela.org"/>
+            </div>
+          </div>
+          <div class="form-group" style="max-width:340px;margin-top:6px;">
+            <label>Contraseña (solo para prueba de conexión)</label>
+            <input type="password" id="cfg-smtp-test-pass" placeholder="Ingresar para probar la conexión"/>
+            <span class="field-hint">No se guarda. Solo se usa al hacer clic en Probar conexión SMTP.</span>
+          </div>
+          <div id="msg-smtp-test" style="margin-top:12px;"></div>
+
+        </div>
+
+
+        <!-- Pestaña: Contraseña maestra -->
+        <div class="pivot-panel" id="cfg-pwd">
+          <p style="font-size:13px;color:var(--gray-60);margin-bottom:16px;line-height:1.6;">
+            Cambie la contraseña maestra que protege el archivo de configuración cifrado.
+            Todos los datos serán reencifrados con la nueva contraseña.
+          </p>
+          <div id="msg-pwd-change"></div>
+          <div class="form-grid" style="max-width:480px;">
+            <div class="form-group full">
+              <label>Contraseña actual</label>
+              <input type="password" id="pwd-current" placeholder="Ingrese la contraseña actual"
+                     onkeydown="if(event.key==='Enter') document.getElementById('pwd-new1').focus()"/>
+            </div>
+            <div class="form-group full">
+              <label>Nueva contraseña <span class="req">*</span></label>
+              <input type="password" id="pwd-new1" placeholder="Mínimo 6 caracteres"
+                     oninput="checkPwdStrength()"
+                     onkeydown="if(event.key==='Enter') document.getElementById('pwd-new2').focus()"/>
+              <div style="height:4px;border-radius:2px;background:var(--gray-10);margin-top:6px;overflow:hidden;">
+                <div id="pwd-strength-bar" style="height:100%;width:0;transition:width .2s,background .2s;"></div>
+              </div>
+              <span class="field-hint" id="pwd-strength-label"></span>
+            </div>
+            <div class="form-group full">
+              <label>Confirmar nueva contraseña <span class="req">*</span></label>
+              <input type="password" id="pwd-new2" placeholder="Repita la nueva contraseña"
+                     onkeydown="if(event.key==='Enter') changePassword()"/>
+            </div>
+          </div>
+          <div style="margin-top:16px;">
+            <button class="cmd-btn primary" onclick="changePassword()">
+              <svg viewBox="0 0 16 16"><path d="M8 1a5 5 0 00-5 5v1H2v8h12V7h-1V6a5 5 0 00-5-5zm0 1.5A3.5 3.5 0 0111.5 6v1h-7V6A3.5 3.5 0 018 2.5zM8 10a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="white"/></svg>
+              Cambiar contraseña
+            </button>
+          </div>
+        </div>
+
         <!-- Pestaña 4: Información -->
         <div class="pivot-panel" id="cfg-about">
           <table style="font-size:13px;border-collapse:collapse;width:100%;max-width:420px;">
@@ -815,6 +1179,59 @@ select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns
 
   </div><!-- /content -->
 </div><!-- /shell -->
+
+
+<!-- Dialog confirmar eliminación -->
+<div class="overlay" id="dlg-delete">
+  <div class="dialog" style="max-width:460px;">
+    <div class="dialog-header" style="color:var(--error);">Confirmar eliminación</div>
+    <div class="dialog-body">
+      <input type="hidden" id="del-uid"/>
+      <input type="hidden" id="del-upn"/>
+      <div class="msgbar show error" style="margin-bottom:14px;">
+        Esta acción es <strong>permanente e irreversible</strong>. La cuenta y todos sus datos serán eliminados de Microsoft 365.
+      </div>
+      <p style="font-size:13px;color:var(--gray-80);margin-bottom:14px;">
+        Cuenta a eliminar:<br/>
+        <strong id="del-upn-label" style="font-family:Consolas,monospace;color:var(--error);"></strong>
+      </p>
+      <div class="form-group">
+        <label>Para confirmar, escriba el siguiente token: <strong id="del-token-label" style="font-family:Consolas,monospace;color:var(--ms-blue);letter-spacing:1px;"></strong></label>
+        <input type="text" id="del-token-input" placeholder="Escriba el token aquí..." autocomplete="off" spellcheck="false"
+               oninput="checkDeleteToken()" style="margin-top:6px;"/>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="cmd-btn" onclick="closeDlgDelete()">Cancelar</button>
+      <button class="cmd-btn" id="btn-confirm-delete" disabled
+              style="background:var(--error);color:white;border-color:var(--error);opacity:.4;"
+              onclick="confirmDelete()">Eliminar cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog confirmar eliminación masiva CSV -->
+<div class="overlay" id="dlg-delete-csv">
+  <div class="dialog" style="max-width:480px;">
+    <div class="dialog-header" style="color:var(--error);">Confirmar eliminación masiva</div>
+    <div class="dialog-body">
+      <div class="msgbar show error" style="margin-bottom:14px;">
+        Esta acción eliminará <strong id="del-csv-count">0</strong> cuentas de forma <strong>permanente e irreversible</strong>.
+      </div>
+      <div class="form-group">
+        <label>Para confirmar, escriba el siguiente token: <strong id="del-csv-token-label" style="font-family:Consolas,monospace;color:var(--ms-blue);letter-spacing:1px;"></strong></label>
+        <input type="text" id="del-csv-token-input" placeholder="Escriba el token aquí..." autocomplete="off" spellcheck="false"
+               oninput="checkDeleteCsvToken()" style="margin-top:6px;"/>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="cmd-btn" onclick="closeDlgDeleteCsv()">Cancelar</button>
+      <button class="cmd-btn" id="btn-confirm-delete-csv" disabled
+              style="background:var(--error);color:white;border-color:var(--error);opacity:.4;"
+              onclick="confirmDeleteCsv()">Eliminar cuentas</button>
+    </div>
+  </div>
+</div>
 
 <!-- Dialog editar usuario -->
 <div class="overlay" id="dlg-edit">
@@ -855,6 +1272,234 @@ let licenses = [];
 let selectedTipo = 'maestro';
 let csvRows = [];
 
+
+// ════════════════════════════════════════════════════════════
+// NOTIFICACIONES
+// ════════════════════════════════════════════════════════════
+const NOTIF_VARS = ['lote','cedula','nombres','apellidos','email_personal','alias',
+  'celular','estado','email_institucional','nombre_completo','tipo','id',
+  'creado','estado_cuenta','observacion'];
+
+let notifRows      = [];
+let notifResults   = [];
+let templateContent= '';
+
+function initVarsChips() {
+  const el = document.getElementById('vars-chips');
+  if (!el) return;
+  el.innerHTML = NOTIF_VARS.map(v =>
+    `<code style="background:var(--info-bg);color:var(--ms-blue-darker);padding:3px 8px;border-radius:2px;font-size:11.5px;cursor:pointer;"
+           onclick="navigator.clipboard.writeText('{{${v}}}')" title="Clic para copiar">{{${v}}}</code>`
+  ).join('');
+}
+
+async function refreshTemplates() {
+  const res = await window.api.listTemplates();
+  const sel = document.getElementById('notif-template');
+  if (!res.ok) { msgbar('msg-notif','error','Error al leer plantillas: ' + res.error); return; }
+  sel.innerHTML = '<option value="">— Seleccione una plantilla —</option>' +
+    res.files.map(f => `<option value="${esc(f)}">${esc(f.replace(/\.html$/i,''))}</option>`).join('');
+  if (res.files.length === 0) {
+    msgbar('msg-notif','info',`Sin plantillas. Coloque archivos .html en: ${res.dir}`);
+  }
+}
+
+async function onTemplateChange() {
+  const filename = document.getElementById('notif-template').value;
+  if (!filename) {
+    templateContent = '';
+    document.getElementById('notif-subject').value = '';
+    return;
+  }
+  const res = await window.api.readTemplate(filename);
+  if (!res.ok) { msgbar('msg-notif','error','Error al leer plantilla: ' + res.error); return; }
+  templateContent = res.content;
+  // Subject = filename without extension or special chars
+  const subj = filename.replace(/\.html$/i,'').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ ._-]/g,' ').trim();
+  document.getElementById('notif-subject').value = subj;
+  // Show preview
+}
+
+function toggleVarsTable() {
+  const w = document.getElementById('vars-table-wrap');
+  w.style.display = w.style.display === 'none' ? '' : 'none';
+}
+
+// CSV loading
+async function loadNotifCsv() {
+  const res = await window.api.openNotifCsv();
+  if (!res.ok) return;
+  processNotifCsv(res.content, res.filePath.split(/[\\/]/).pop());
+}
+
+function processNotifCsv(text, filename) {
+  const { rows } = parseCSVPreserveCase(text);
+  if (!rows.length) { msgbar('msg-notif','error','El CSV está vacío o tiene formato incorrecto.'); return; }
+  notifRows = rows;
+  const destFieldVal = document.getElementById('notif-dest-field')?.value || 'email_personal';
+  const withEmail = rows.filter(r => (r[destFieldVal]||'').trim()).length;
+  document.getElementById('notif-dz-title').textContent    = filename || 'Archivo cargado';
+  document.getElementById('notif-dz-sub').textContent      = `${rows.length} filas cargadas`;
+  document.getElementById('notif-csv-rows').textContent    = rows.length;
+  document.getElementById('notif-csv-emails').textContent  = withEmail;
+  document.getElementById('notif-csv-info').style.display  = '';
+  document.getElementById('notif-count-label').textContent = `${rows.length} destinatarios`;
+  document.getElementById('btn-send-notif').disabled       = false;
+  document.getElementById('notif-csv-table-title').textContent = `Destinatarios cargados (${rows.length})`;
+  renderNotifCsvTable(rows);
+  document.getElementById('notif-csv-table-section').style.display = '';
+  clearMsg('msg-notif');
+}
+
+function renderNotifCsvTable(rows) {
+  const COLS = ['Nombre completo','Cedula','Email personal','Email institucional',
+    'Alias','Celular','Tipo','Estado cuenta','Lote','Observacion'];
+  const body = document.getElementById('notif-csv-tbody');
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><strong>Sin datos</strong></div></td></tr>'; return; }
+  body.innerHTML = rows.map((r, i) => {
+    const estadoCls = (r['estado_cuenta']||'').toLowerCase() === 'activa' ? 'badge-success'
+                    : (r['estado_cuenta']||'').toLowerCase() === 'inactiva' ? 'badge-error'
+                    : 'badge-neutral';
+    return `<tr>
+      <td style='color:var(--gray-60);font-size:11px;'>${i+1}</td>
+      <td style='font-weight:500;'>${esc(r['nombre_completo']||'-')}</td>
+      <td class='font-mono'>${esc(r['cedula']||'-')}</td>
+      <td class='font-mono' style='font-size:11px;'>${esc(r['email_personal']||'-')}</td>
+      <td class='font-mono' style='font-size:11px;'>${esc(r['email_institucional']||'-')}</td>
+      <td class='font-mono'>${esc(r['alias']||'-')}</td>
+      <td class='font-mono'>${esc(r['celular']||'-')}</td>
+      <td><span class='badge badge-neutral'>${esc(r['tipo']||'-')}</span></td>
+      <td><span class='badge ${estadoCls}'>${esc(r['estado_cuenta']||'-')}</span></td>
+      <td class='font-mono' style='font-size:11px;'>${esc(r['lote']||'-')}</td>
+      <td style='font-size:11px;'>${esc(r['observacion']||'-')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterNotifTable() {
+  const q = (document.getElementById('notif-csv-search').value || '').toLowerCase();
+  const filtered = q ? notifRows.filter(r =>
+    Object.values(r).some(v => String(v||'').toLowerCase().includes(q))
+  ) : notifRows;
+  renderNotifCsvTable(filtered);
+  document.getElementById('notif-csv-table-title').textContent =
+    q ? `Destinatarios cargados (${filtered.length} de ${notifRows.length})`
+      : `Destinatarios cargados (${notifRows.length})`;
+}
+
+function onNotifDragOver(e)  { e.preventDefault(); document.getElementById('notif-drop-zone').classList.add('drag-over'); }
+function onNotifDragLeave(e) { document.getElementById('notif-drop-zone').classList.remove('drag-over'); }
+function onNotifDrop(e) {
+  e.preventDefault();
+  document.getElementById('notif-drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.name.endsWith('.csv')) { msgbar('msg-notif','error','Solo archivos .csv'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => processNotifCsv(ev.target.result, file.name);
+  reader.readAsText(file, 'utf-8');
+}
+
+async function sendNotifications() {
+  if (!notifRows.length)  { msgbar('msg-notif','error','Cargue primero el CSV de destinatarios.'); return; }
+  if (!templateContent)   { msgbar('msg-notif','error','Seleccione una plantilla HTML.'); return; }
+
+  const host    = cfg.smtpHost || '';
+  const port    = cfg.smtpPort || '587';
+  const user    = cfg.smtpUser || '';
+  const pass    = document.getElementById('notif-pass').value;
+  const subject = document.getElementById('notif-subject').value.trim();
+
+  if (!host || !user) {
+    msgbar('msg-notif','error','Configure el servidor SMTP y el remitente en Configuración → Correo saliente.');
+    return;
+  }
+  if (!pass) {
+    msgbar('msg-notif','error','Ingrese la contraseña del remitente antes de enviar.');
+    return;
+  }
+  if (!subject) { msgbar('msg-notif','error','El asunto del mensaje no puede estar vacío.'); return; }
+
+  load(`Enviando ${notifRows.length} correos...`);
+  const destField = document.getElementById('notif-dest-field').value;
+  const res = await window.api.sendNotifications({
+    smtpCfg: { host, port, user, pass },
+    rows: notifRows,
+    templateContent,
+    subject,
+    destField,
+  });
+  unload();
+
+  if (!res.ok) { msgbar('msg-notif','error','Error SMTP: ' + res.error); return; }
+
+  notifResults = res.results;
+  renderNotifResults(notifResults);
+}
+
+function renderNotifResults(results) {
+  const sent   = results.filter(r => r.envio_estado === 'Enviado').length;
+  const errors = results.filter(r => r.envio_estado === 'Error').length;
+  const skip   = results.filter(r => r.envio_estado === 'Omitido').length;
+
+  document.getElementById('notif-result-summary').innerHTML = `
+    <span class="result-chip" style="background:var(--success-bg);color:#0b6a0b;">Enviados: ${sent}</span>
+    <span class="result-chip" style="background:var(--error-bg);color:#8e1a1f;">Errores: ${errors}</span>
+    <span class="result-chip" style="background:var(--gray-6);color:var(--gray-60);">Omitidos: ${skip}</span>
+    <span class="result-chip" style="background:var(--info-bg);color:var(--ms-blue-darker);">Total: ${results.length}</span>
+  `;
+
+  document.getElementById('notif-results-body').innerHTML = results.map(r => {
+    const dest = esc(r['email_personal'] || r['email_institucional'] || '-');
+    const cls  = r.envio_estado === 'Enviado' ? 'result-row-ok'
+               : r.envio_estado === 'Error'   ? 'result-row-error' : '';
+    const badge = r.envio_estado === 'Enviado'
+      ? '<span class="badge badge-success">Enviado</span>'
+      : r.envio_estado === 'Error'
+      ? '<span class="badge badge-error">Error</span>'
+      : '<span class="badge badge-neutral">Omitido</span>';
+    return `<tr class="${cls}">
+      <td class="font-mono" style="font-size:11px;">${dest}</td>
+      <td>${esc(r['nombre_completo']||'-')}</td>
+      <td>${esc(r['cedula']||'-')}</td>
+      <td class="font-mono" style="font-size:11px;">${esc(r['email_personal']||'-')}</td>
+      <td class="font-mono">${esc(r['alias']||'-')}</td>
+      <td class="font-mono" style="font-size:11px;">${esc(r['lote']||'-')}</td>
+      <td>${badge}</td>
+      <td style="font-size:11px;color:var(--error);">${esc(r.envio_detalle||'')}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('notif-results-section').style.display = '';
+  document.getElementById('notif-results-section').scrollIntoView({ behavior: 'smooth' });
+
+  const sent2 = results.filter(r => r.envio_estado === 'Enviado').length;
+  const err2  = results.filter(r => r.envio_estado === 'Error').length;
+  if (!err2) msgbar('msg-notif','success',`Envío completado: ${sent2} correos enviados correctamente.`);
+  else       msgbar('msg-notif','info',`Envío finalizado: ${sent2} enviados, ${err2} con error.`);
+}
+
+function exportNotifResults() {
+  if (!notifResults.length) return;
+  const bom    = '\uFEFF';
+  const header = 'destinatario,nombre_completo,cedula,email_personal,alias,lote,estado_envio,detalle\n';
+  const rows   = notifResults.map(r => {
+    const csvVal = v => '"' + String(v||'').replace(/"/g,'""') + '"';
+    return [
+      r['email_personal'] || r['email_institucional'] || '',
+      r['nombre_completo'] || '', r['cedula'] || '',
+      r['email_personal'] || '', r['alias'] || '', r['lote'] || '',
+      r.envio_estado || '', r.envio_detalle || '',
+    ].map(csvVal).join(',');
+  }).join('\n');
+  const blob = new Blob([bom + header + rows], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `resultados-notificaciones-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ════════════════════════════════════════════════
 // Arranque
 // ════════════════════════════════════════════════
@@ -862,9 +1507,12 @@ async function init() {
   cfg = await window.api.getConfig();
   loadConfigForm();
   refreshPassword();
+  refreshTemplates();
+  initVarsChips();
   if (cfg.tenantId && cfg.clientId && cfg.clientSecret) {
     setStatus('loading', 'Conectando...');
     await loadDashboard();
+    dashboardLoaded = true;
   }
   refreshLog();
 }
@@ -878,9 +1526,9 @@ function nav(el) {
   el.classList.add('active');
   const p = el.dataset.page;
   document.getElementById('page-' + p).classList.add('active');
-  if (p === 'users')     loadUsers();
+  if (p === 'users'     && !usersLoaded)     { loadUsers();     usersLoaded     = true; }
   if (p === 'log')       refreshLog();
-  if (p === 'dashboard') loadDashboard();
+  if (p === 'dashboard' && !dashboardLoaded) { loadDashboard(); dashboardLoaded = true; }
 }
 
 // ════════════════════════════════════════════════
@@ -946,7 +1594,6 @@ function renderLicTable(lics) {
 function populateLicSelects() {
   const base = licenses.map(l => `<option value="${esc(l.skuId)}">${esc(l.skuPartNumber)} (${l.consumedUnits}/${l.prepaidUnits?.enabled||0})</option>`).join('');
   document.getElementById('edit-sku').innerHTML         = '<option value="">— Sin cambio —</option>' + base;
-  document.getElementById('csv-default-sku').innerHTML  = '<option value="">— Sin licencia predeterminada —</option>' + base;
   // Selects en configuración
   const cfgNone = '<option value="">— Sin licencia predeterminada —</option>';
   const sm = document.getElementById('cfg-sku-maestro');
@@ -1014,9 +1661,28 @@ async function createUser() {
 // ════════════════════════════════════════════════
 // Usuarios
 // ════════════════════════════════════════════════
+// ── Formateador de fechas ISO → dd/mm/aaaa HH:mm ─────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fmtDateShort(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
 // ── Sort state ────────────────────────────────────────────────────────────────
 let sortCol = 'displayName';
 let sortDir = 'asc'; // 'asc' | 'desc'
+let dashboardLoaded = false;
+let usersLoaded     = false;
 
 async function loadUsers() {
   if (!cfg.tenantId) return;
@@ -1042,7 +1708,11 @@ function filterUsers() {
   const fTipo   = (document.getElementById('cf-tipo')?.value    || '').toLowerCase();
   const fTel    = (document.getElementById('cf-tel')?.value     || '').toLowerCase();
   const fLic    = (document.getElementById('cf-lic')?.value     || '');
-  const fEstado = (document.getElementById('cf-estado')?.value  || '');
+  const fEstado  = (document.getElementById('cf-estado')?.value  || '');
+  const fCreated = (document.getElementById('cf-created')?.value || '').toLowerCase();
+  const fAttr1   = (document.getElementById('cf-attr1')?.value   || '').toLowerCase();
+  const fAttr2   = (document.getElementById('cf-attr2')?.value   || '').toLowerCase();
+  const fAttr3   = (document.getElementById('cf-attr3')?.value   || '').toLowerCase();
 
   let list = allUsers.filter(u => {
     const upn   = (u.userPrincipalName || '').toLowerCase();
@@ -1055,6 +1725,11 @@ function filterUsers() {
     if (fTel    && !(u.mobilePhone||'').toLowerCase().includes(fTel))     return false;
     if (fLic    && hasLic !== fLic)                                       return false;
     if (fEstado && active !== fEstado)                                    return false;
+    if (fCreated && !fmtDateShort(u.createdDateTime || '').includes(fCreated)) return false;
+    const ea = u.onPremisesExtensionAttributes || {};
+    if (fAttr1 && !(ea.extensionAttribute1||'').toLowerCase().includes(fAttr1)) return false;
+    if (fAttr2 && !(ea.extensionAttribute2||'').toLowerCase().includes(fAttr2)) return false;
+    if (fAttr3 && !(ea.extensionAttribute3||'').toLowerCase().includes(fAttr3)) return false;
     return true;
   });
 
@@ -1079,6 +1754,15 @@ function sortList(list) {
     } else if (sortCol === 'accountEnabled') {
       va = a.accountEnabled ? 1 : 0;
       vb = b.accountEnabled ? 1 : 0;
+    } else if (sortCol === 'attr1') {
+      va = (a.onPremisesExtensionAttributes?.extensionAttribute1 || '').toLowerCase();
+      vb = (b.onPremisesExtensionAttributes?.extensionAttribute1 || '').toLowerCase();
+    } else if (sortCol === 'attr2') {
+      va = (a.onPremisesExtensionAttributes?.extensionAttribute2 || '').toLowerCase();
+      vb = (b.onPremisesExtensionAttributes?.extensionAttribute2 || '').toLowerCase();
+    } else if (sortCol === 'attr3') {
+      va = (a.onPremisesExtensionAttributes?.extensionAttribute3 || '').toLowerCase();
+      vb = (b.onPremisesExtensionAttributes?.extensionAttribute3 || '').toLowerCase();
     } else {
       va = String(a[sortCol] || '').toLowerCase();
       vb = String(b[sortCol] || '').toLowerCase();
@@ -1110,7 +1794,7 @@ function sortUsers(th) {
 function renderUsers(list) {
   const body = document.getElementById('users-body');
   if (!list.length) {
-    body.innerHTML = '<tr><td colspan="7"><div class="empty-state"><strong>Sin resultados</strong>No se encontraron usuarios con los filtros aplicados.</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="10"><div class="empty-state"><strong>Sin resultados</strong>No se encontraron usuarios con los filtros aplicados.</div></td></tr>';
     return;
   }
   body.innerHTML = list.map(u => {
@@ -1135,9 +1819,14 @@ function renderUsers(list) {
       <td class="font-mono">${esc(u.mobilePhone||'—')}</td>
       <td>${licBadge}</td>
       <td>${estadoBadge}</td>
+      <td class="font-mono" style="font-size:11.5px;white-space:nowrap;">${fmtDate(u.createdDateTime)}</td>
+      <td class="font-mono" style="font-size:11.5px;">${esc(u.onPremisesExtensionAttributes?.extensionAttribute1||'—')}</td>
+      <td class="font-mono" style="font-size:11.5px;">${esc(u.onPremisesExtensionAttributes?.extensionAttribute2||'—')}</td>
+      <td style="font-size:11.5px;">${esc(u.onPremisesExtensionAttributes?.extensionAttribute3||'—')}</td>
       <td style="white-space:nowrap;">
         <button class="cmd-btn" style="padding:3px 10px;font-size:12px;" onclick="openEdit('${escA(u.id)}','${escA(upn)}','${escA(u.mobilePhone||'')}')">Editar</button>
         ${actionBtn}
+        <button class="cmd-btn" style="color:var(--error);padding:3px 10px;font-size:12px;border-color:rgba(164,38,44,.3);" onclick="openDeleteDlg('${escA(u.id)}','${escA(upn)}')">Eliminar</button>
       </td>
     </tr>`;
   }).join('');
@@ -1150,7 +1839,11 @@ function exportUsersCSV() {
   const fTipo   = (document.getElementById('cf-tipo')?.value    || '').toLowerCase();
   const fTel    = (document.getElementById('cf-tel')?.value     || '').toLowerCase();
   const fLic    = (document.getElementById('cf-lic')?.value     || '');
-  const fEstado = (document.getElementById('cf-estado')?.value  || '');
+  const fEstado  = (document.getElementById('cf-estado')?.value  || '');
+  const fCreated = (document.getElementById('cf-created')?.value || '').toLowerCase();
+  const fAttr1   = (document.getElementById('cf-attr1')?.value   || '').toLowerCase();
+  const fAttr2   = (document.getElementById('cf-attr2')?.value   || '').toLowerCase();
+  const fAttr3   = (document.getElementById('cf-attr3')?.value   || '').toLowerCase();
 
   let list = allUsers.filter(u => {
     const upn   = (u.userPrincipalName || '').toLowerCase();
@@ -1163,19 +1856,27 @@ function exportUsersCSV() {
     if (fTel    && !(u.mobilePhone||'').toLowerCase().includes(fTel))     return false;
     if (fLic    && hasLic !== fLic)                                       return false;
     if (fEstado && active !== fEstado)                                    return false;
+    if (fCreated && !fmtDateShort(u.createdDateTime || '').includes(fCreated)) return false;
+    const ea = u.onPremisesExtensionAttributes || {};
+    if (fAttr1 && !(ea.extensionAttribute1||'').toLowerCase().includes(fAttr1)) return false;
+    if (fAttr2 && !(ea.extensionAttribute2||'').toLowerCase().includes(fAttr2)) return false;
+    if (fAttr3 && !(ea.extensionAttribute3||'').toLowerCase().includes(fAttr3)) return false;
     return true;
   });
   list = sortList(list);
 
   const bom = '\uFEFF';
-  const header = 'Nombre completo,Usuario (UPN),Tipo,Teléfono,Licencia,Estado\n';
+  const header = 'nombre_completo,usuario_upn,tipo,telefono,licencia,estado,creacion,lote_ca1,cedula_ca2,correo_personal_ca3\n';
   const rows = list.map(u => {
     const upn   = u.userPrincipalName || '';
     const tipo  = getUserTipo(upn);
     const lic   = u.assignedLicenses?.length ? 'Con licencia' : 'Sin licencia';
     const estado = u.accountEnabled ? 'Activo' : 'Inactivo';
     const csvVal = v => `"${String(v||'').replace(/"/g,'""')}"`;
-    return [u.displayName, upn, tipo, u.mobilePhone||'', lic, estado].map(csvVal).join(',');
+    const ea = u.onPremisesExtensionAttributes || {};
+    return [u.displayName, upn, tipo, u.mobilePhone||'', lic, estado,
+            fmtDate(u.createdDateTime),
+            ea.extensionAttribute1||'', ea.extensionAttribute2||'', ea.extensionAttribute3||''].map(csvVal).join(',');
   }).join('\n');
 
   const blob = new Blob([bom + header + rows], { type: 'text/csv;charset=utf-8' });
@@ -1218,7 +1919,7 @@ async function saveEdit() {
 }
 
 // ════════════════════════════════════════════════
-// Importar CSV
+// Acciones masivas
 // ════════════════════════════════════════════════
 
 // ── Parsear CSV robusto (maneja comillas y comas dentro de campos)
@@ -1250,6 +1951,40 @@ function parseCSV(text) {
   return { headers, rows };
 }
 
+
+// Variante de parseCSV que conserva el case original de los encabezados
+// (usada para el CSV de notificaciones cuyos campos tienen mayúsculas y espacios)
+function parseCSVPreserveCase(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+  if (lines.length < 2) return { headers: [], rows: [] };
+
+  function parseLine(line) {
+    const result = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else { inQ = !inQ; } }
+      else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  // Preserve original case, only strip BOM and surrounding quotes
+  const headers = parseLine(lines[0]).map(h =>
+    h.replace(/^\uFEFF/, '').replace(/^"|"$/g, '').trim()
+  );
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseLine(lines[i]);
+    if (vals.every(v => !v)) continue;
+    const row = { _fila: i };
+    headers.forEach((h, idx) => { row[h] = (vals[idx] || '').replace(/^"|"$/g, '').trim(); });
+    rows.push(row);
+  }
+  return { headers, rows };
+}
+
 async function selectCsvFile() {
   const res = await window.api.openCsvDialog();
   if (!res.ok) return;
@@ -1264,7 +1999,6 @@ function processCsvContent(text, fileName) {
   document.getElementById('csv-file-name').textContent   = fileName || '';
   document.getElementById('csv-row-count').textContent   = rows.length;
   document.getElementById('csv-preview-section').style.display = '';
-  document.getElementById('csv-sku-wrap').style.display         = '';
   document.getElementById('csv-results-section').style.display  = 'none';
   document.getElementById('dz-title').textContent = fileName || 'Archivo cargado';
   document.getElementById('dz-sub').textContent   = `${rows.length} filas encontradas — haga clic para cambiar el archivo`;
@@ -1279,7 +2013,7 @@ function renderCsvPreview(rows) {
     const badgeClass = `badge csv-badge-${accion}` + (!['crear','editar','desactivar','activar'].includes(accion) ? ' badge-error' : '');
     const nombres   = accion === 'crear' ? esc(r.nombres   || '—') : '—';
     const apellidos = accion === 'crear' ? esc(r.apellidos || '—') : '—';
-    const destino   = accion === 'crear' ? esc((r.dominio||cfg.defaultDomain||'').replace(/^@/,'')) : `<span class="font-mono">${esc(r.upn_existente||'')}</span>`;
+    const cuentaInst = esc(r.cuenta_institucional || '—');
     const tipo      = accion === 'crear' ? `<span class="badge badge-neutral">${esc(r.tipo||'otro')}</span>` : '—';
     return `<tr>
       <td style="color:var(--gray-60);font-size:12px;">${r._fila}</td>
@@ -1287,8 +2021,8 @@ function renderCsvPreview(rows) {
       <td>${tipo}</td>
       <td>${nombres}</td>
       <td>${apellidos}</td>
-      <td>${destino}</td>
       <td class="font-mono">${esc(r.telefono||'—')}</td>
+      <td class="font-mono">${cuentaInst}</td>
       <td class="font-mono">${esc(r.cedula||'—')}</td>
       <td class="font-mono" style="font-size:11px;">${esc(r.mailpersonal||'—')}</td>
       <td style="font-size:11px;">${esc(r.observacion||'—')}</td>
@@ -1300,10 +2034,17 @@ async function runCsvImport() {
   if (!csvRows.length) return;
   if (!cfg.tenantId)  { msgbar('msg-import','error','Configure las credenciales de Azure antes de importar.'); return; }
 
-  const defaultSku = document.getElementById('csv-default-sku').value;
-  load(`Procesando ${csvRows.length} filas...`);
+  // Si hay filas de eliminación, solicitar token antes de proceder
+  const elimRows = csvRows.filter(r => (r.accion||'').trim().toLowerCase() === 'eliminar');
+  if (elimRows.length > 0) { openDeleteCsvDlg(csvRows); return; }
 
-  const res = await window.api.processCsv({ cfg, rows: csvRows, skuId: defaultSku });
+  await runCsvImportRows(csvRows);
+}
+
+async function runCsvImportRows(rowsToProcess) {
+  load(`Procesando ${rowsToProcess.length} filas...`);
+
+  const res = await window.api.processCsv({ cfg, rows: rowsToProcess, skuId: '' });
   unload();
 
   if (!res.ok) { msgbar('msg-import','error',`Error: ${res.error}`); return; }
@@ -1318,18 +2059,33 @@ async function runCsvImport() {
     <span class="result-chip" style="background:var(--gray-6);color:var(--gray-60);">Total: ${results.length}</span>
   `;
 
+  // Store results globally for CSV export
+  window._lastImportResults = results;
+
   document.getElementById('results-body').innerHTML = results.map(r => {
-    const cls    = r.estado === 'éxito' ? 'result-row-ok' : 'result-row-error';
-    const badge  = r.estado === 'éxito'
+    const cls          = r.estado === 'éxito' ? 'result-row-ok' : 'result-row-error';
+    const estadoBadge  = r.estado === 'éxito'
       ? '<span class="badge badge-success">Éxito</span>'
-      : '<span class="badge badge-error">Error</span>';
-    const accBadge = `<span class="badge csv-badge-${r.accion}">${esc(r.accion)}</span>`;
+      : `<span class="badge badge-error" title="${esc(r.detalle||'')}">Error</span>`;
+    const enabledLabel = r.accountEnabled === true  ? 'Activa'
+                       : r.accountEnabled === false ? 'Inactiva' : '-';
+    const creadoFmt    = r.creado ? fmtDate(r.creado) : '-';
     return `<tr class="${cls}">
-      <td style="color:var(--gray-60);font-size:12px;">${r.fila}</td>
-      <td>${accBadge}</td>
-      <td class="font-mono">${esc(r.upn||'—')}</td>
-      <td>${badge}</td>
-      <td style="font-size:12px;">${esc(r.detalle)}</td>
+      <td class="font-mono" style="font-size:11px;">${esc(r.lote||'-')}</td>
+      <td>${esc(r.cedula||'-')}</td>
+      <td>${esc(r.nombres||'-')}</td>
+      <td>${esc(r.apellidos||'-')}</td>
+      <td class="font-mono" style="font-size:11px;">${esc(r.mailpersonal||'-')}</td>
+      <td class="font-mono">${esc(r.alias||'-')}</td>
+      <td class="font-mono">${esc(r.celular||'-')}</td>
+      <td>${estadoBadge}</td>
+      <td class="font-mono" style="font-size:11px;">${esc(r.upn||'-')}</td>
+      <td>${esc(r.displayName||'-')}</td>
+      <td><span class="badge badge-neutral">${esc(r.tipo||'-')}</span></td>
+      <td class="font-mono" style="font-size:10px;">${esc(r.id||'-')}</td>
+      <td class="font-mono" style="font-size:11px;">${creadoFmt}</td>
+      <td>${enabledLabel}</td>
+      <td style="font-size:11px;">${esc(r.observacion||"-")}</td>
     </tr>`;
   }).join('');
 
@@ -1339,18 +2095,172 @@ async function runCsvImport() {
   if (errCount === 0) msgbar('msg-import','success',`Importación completada: ${ok} operaciones exitosas.`);
   else msgbar('msg-import','info',`Importación finalizada: ${ok} éxito, ${errCount} con error. Revise los resultados.`);
 
+  dashboardLoaded = false;
+  usersLoaded = false;
   await loadDashboard();
+  dashboardLoaded = true;
 }
 
 function clearCsvImport() {
   csvRows = [];
   document.getElementById('csv-preview-section').style.display  = 'none';
   document.getElementById('csv-results-section').style.display  = 'none';
-  document.getElementById('csv-sku-wrap').style.display          = 'none';
   document.getElementById('btn-run-csv').disabled = true;
   document.getElementById('dz-title').textContent = 'Haga clic para seleccionar un archivo CSV';
   document.getElementById('dz-sub').textContent   = 'O arrastre y suelte el archivo aquí';
   clearMsg('msg-import');
+}
+
+
+// ════════════════════════════════════════════════
+// Eliminar usuario individual — token de confirmación
+// ════════════════════════════════════════════════
+let deleteToken = '';
+let deleteCsvToken = '';
+let pendingCsvRows = [];
+
+function generateToken(len) {
+  len = len || 8;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+function openDeleteDlg(uid, upn) {
+  deleteToken = generateToken(8);
+  document.getElementById('del-uid').value             = uid;
+  document.getElementById('del-upn').value             = upn;
+  document.getElementById('del-upn-label').textContent  = upn;
+  document.getElementById('del-token-label').textContent = deleteToken;
+  document.getElementById('del-token-input').value     = '';
+  const btn = document.getElementById('btn-confirm-delete');
+  btn.disabled = true; btn.style.opacity = '.4';
+  document.getElementById('dlg-delete').classList.add('show');
+}
+
+function checkDeleteToken() {
+  const val = (document.getElementById('del-token-input').value || '').trim().toUpperCase();
+  const btn = document.getElementById('btn-confirm-delete');
+  const ok  = val === deleteToken;
+  btn.disabled = !ok; btn.style.opacity = ok ? '1' : '.4';
+}
+
+function closeDlgDelete() {
+  document.getElementById('dlg-delete').classList.remove('show');
+  deleteToken = '';
+}
+
+async function confirmDelete() {
+  const uid = document.getElementById('del-uid').value;
+  const upn = document.getElementById('del-upn').value;
+  closeDlgDelete();
+  load('Eliminando cuenta...');
+  const res = await window.api.deleteUser({ cfg, userId: uid, upn });
+  unload();
+  if (res.ok) {
+    allUsers = allUsers.filter(u => u.id !== uid);
+    set('nav-count', allUsers.length);
+    filterUsers();
+    msgbar('msg-users', 'success', `Cuenta ${upn} eliminada correctamente.`);
+  } else {
+    msgbar('msg-users', 'error', `Error al eliminar: ${res.error}`);
+  }
+}
+
+// ════════════════════════════════════════════════
+// Eliminar masivo desde CSV — token de confirmación
+// ════════════════════════════════════════════════
+function openDeleteCsvDlg(rows) {
+  pendingCsvRows = rows;
+  deleteCsvToken = generateToken(8);
+  document.getElementById('del-csv-count').textContent        = rows.filter(r => (r.accion||'').toLowerCase() === 'eliminar').length;
+  document.getElementById('del-csv-token-label').textContent  = deleteCsvToken;
+  document.getElementById('del-csv-token-input').value        = '';
+  const btn = document.getElementById('btn-confirm-delete-csv');
+  btn.disabled = true; btn.style.opacity = '.4';
+  document.getElementById('dlg-delete-csv').classList.add('show');
+}
+
+function checkDeleteCsvToken() {
+  const val = (document.getElementById('del-csv-token-input').value || '').trim().toUpperCase();
+  const btn = document.getElementById('btn-confirm-delete-csv');
+  const ok  = val === deleteCsvToken;
+  btn.disabled = !ok; btn.style.opacity = ok ? '1' : '.4';
+}
+
+function closeDlgDeleteCsv() {
+  document.getElementById('dlg-delete-csv').classList.remove('show');
+  deleteCsvToken = '';
+  pendingCsvRows = [];
+}
+
+async function confirmDeleteCsv() {
+  const rows = pendingCsvRows;
+  closeDlgDeleteCsv();
+  await runCsvImportRows(rows);
+}
+
+function exportResultsCSV() {
+  const results = window._lastImportResults || [];
+  if (!results.length) return;
+  const bom = '\uFEFF';
+  const header = 'lote,cedula,nombres,apellidos,email_personal,alias,celular,estado,email_institucional,nombre_completo,tipo,id,creado,estado_cuenta,observacion\n';
+  const rows = results.map(r => {
+    const enabledLabel = r.accountEnabled === true ? 'Activa'
+                       : r.accountEnabled === false ? 'Inactiva' : '-';
+    const csvVal = v => '"' + String(v||'-').replace(/"/g,'""') + '"';
+    return [
+      r.lote, r.cedula, r.nombres, r.apellidos, r.mailpersonal,
+      r.alias, r.celular, r.estado, r.upn, r.displayName,
+      r.tipo, r.id, r.creado ? fmtDate(r.creado) : '-', enabledLabel, r.observacion||''
+    ].map(csvVal).join(',');
+  }).join('\n');
+  const blob = new Blob([bom + header + rows], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `resultados-importacion-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
+function updateSmtpLabels() {
+  const lUser = document.getElementById('notif-user-label');
+  const lHost = document.getElementById('notif-host-label');
+  const lPort = document.getElementById('notif-port-label');
+  if (lUser) lUser.textContent = cfg.smtpUser || '(no configurado)';
+  if (lHost) lHost.textContent = cfg.smtpHost || '(no configurado)';
+  if (lPort) lPort.textContent = cfg.smtpPort || '587';
+}
+
+function saveNotifDestField() {
+  cfg.smtpDestField = document.getElementById('notif-dest-field').value;
+  window.api.saveConfig(cfg);
+}
+
+async function testSmtp() {
+  const host = document.getElementById('cfg-smtp-host').value.trim();
+  const port = document.getElementById('cfg-smtp-port').value.trim();
+  const user = document.getElementById('cfg-smtp-user').value.trim();
+  const pass = document.getElementById('cfg-smtp-test-pass').value;
+  if (!host || !user || !pass) {
+    msgbar('msg-smtp-test','error','Ingrese servidor, usuario y contraseña para probar la conexión.');
+    return;
+  }
+  load('Probando conexión SMTP...');
+  const res = await window.api.sendNotifications({
+    smtpCfg: { host, port, user, pass },
+    rows: [],
+    templateContent: '',
+    subject: 'prueba',
+    destField: 'Email personal',
+  });
+  unload();
+  if (res.ok) {
+    msgbar('msg-smtp-test','success','Conexión SMTP verificada correctamente.');
+  } else {
+    msgbar('msg-smtp-test','error','Error SMTP: ' + res.error);
+  }
 }
 
 function toggleEjemploCsv() {
@@ -1424,9 +2334,58 @@ function previewPassword() {
   if (el) el.textContent = pw;
 }
 
+
+function checkPwdStrength() {
+  const pw  = document.getElementById('pwd-new1').value;
+  const bar = document.getElementById('pwd-strength-bar');
+  const lbl = document.getElementById('pwd-strength-label');
+  let score = 0;
+  if (pw.length >= 6)  score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const pct = (score / 5) * 100;
+  bar.style.width = pct + '%';
+  if (score <= 2) { bar.style.background = 'var(--error)'; lbl.textContent = 'Débil'; lbl.style.color = 'var(--error)'; }
+  else if (score <= 3) { bar.style.background = '#f59e0b'; lbl.textContent = 'Media'; lbl.style.color = '#92600a'; }
+  else { bar.style.background = 'var(--success)'; lbl.textContent = 'Fuerte'; lbl.style.color = 'var(--success)'; }
+}
+
+async function changePassword() {
+  const current = document.getElementById('pwd-current').value;
+  const newPw1  = document.getElementById('pwd-new1').value;
+  const newPw2  = document.getElementById('pwd-new2').value;
+  clearMsg('msg-pwd-change');
+
+  if (!current) { msgbar('msg-pwd-change', 'error', 'Ingrese la contraseña actual.'); return; }
+  if (newPw1.length < 6) { msgbar('msg-pwd-change', 'error', 'La nueva contraseña debe tener al menos 6 caracteres.'); return; }
+  if (newPw1 !== newPw2) { msgbar('msg-pwd-change', 'error', 'Las contraseñas nuevas no coinciden.'); return; }
+
+  load('Cambiando contraseña maestra...');
+  const res = await window.api.changeMasterPassword({ currentPass: current, newPass: newPw1 });
+  unload();
+
+  if (res.ok) {
+    msgbar('msg-pwd-change', 'success', 'Contraseña maestra actualizada correctamente.');
+    document.getElementById('pwd-current').value = '';
+    document.getElementById('pwd-new1').value = '';
+    document.getElementById('pwd-new2').value = '';
+    document.getElementById('pwd-strength-bar').style.width = '0';
+    document.getElementById('pwd-strength-label').textContent = '';
+  } else {
+    msgbar('msg-pwd-change', 'error', res.error);
+  }
+}
+
 function cfgTab(btn, panelId) {
   document.querySelectorAll('.pivot-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.pivot-panel').forEach(p => p.classList.remove('active'));
+  // Toggle command bars
+  ['cfg-bar-azure','cfg-bar-org','cfg-bar-lic','cfg-bar-smtp','cfg-bar-pwd','cfg-bar-about']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  const barId = btn.dataset.bar;
+  if (barId) { const bar = document.getElementById(barId); if (bar) bar.style.display = ''; }
   btn.classList.add('active');
   document.getElementById(panelId).classList.add('active');
 }
@@ -1446,6 +2405,14 @@ function loadConfigForm() {
   document.getElementById('cfg-state').value  = cfg.state         || 'BOGOTA D.C.';
   document.getElementById('cfg-street').value  = cfg.streetAddress || 'CALLE 99 No. 99-99';
   document.getElementById('cfg-prefix').value  = cfg.phonePrefix   || '+57';
+  // Credenciales SMTP (sin contraseña)
+  // Config tab SMTP fields
+  document.getElementById('cfg-smtp-host').value    = cfg.smtpHost      || 'smtp.office365.com';
+  document.getElementById('cfg-smtp-port').value    = cfg.smtpPort      || '587';
+  document.getElementById('cfg-smtp-user').value    = cfg.smtpUser      || '';
+  // Notif page labels
+  document.getElementById('notif-dest-field').value = cfg.smtpDestField || 'email_personal';
+  updateSmtpLabels();
   const dom = cfg.defaultDomain || '@escuela.org';
   if (dom) document.getElementById('f-domain').value = dom.replace(/^@/, '');
   // Contraseña
@@ -1477,6 +2444,11 @@ async function saveConfig() {
     state:         document.getElementById('cfg-state').value.trim(),
     streetAddress: document.getElementById('cfg-street').value.trim(),
     phonePrefix:   document.getElementById('cfg-prefix').value.trim() || '+57',
+    // SMTP (solo servidor, puerto y usuario — sin contraseña)
+    smtpHost:      document.getElementById('cfg-smtp-host').value.trim(),
+    smtpPort:      document.getElementById('cfg-smtp-port').value.trim() || '587',
+    smtpUser:      document.getElementById('cfg-smtp-user').value.trim(),
+    smtpDestField: document.getElementById('notif-dest-field').value,
     // Licencias por tipo
     skuMaestro:    document.getElementById('cfg-sku-maestro')?.value    || '',
     skuEstudiante: document.getElementById('cfg-sku-estudiante')?.value || '',

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"/><style>
+body { font-family: 'Segoe UI', Arial, sans-serif; background:#f3f2f1; margin:0; padding:20px; }
+.container { max-width:600px; margin:0 auto; background:white; border-radius:6px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+.header { background:#0078d4; color:white; padding:28px 32px; }
+.header h1 { margin:0; font-size:22px; font-weight:600; }
+.body { padding:28px 32px; color:#201f1e; line-height:1.6; }
+.field { background:#f3f2f1; border-radius:4px; padding:14px 16px; margin:16px 0; }
+.field strong { display:block; font-size:11px; color:#605e5c; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+.field span { font-size:15px; color:#0078d4; font-weight:600; }
+.footer { background:#faf9f8; padding:16px 32px; font-size:11px; color:#605e5c; border-top:1px solid #e1dfdd; }
+</style></head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Bienvenido/a a Microsoft 365</h1>
+  </div>
+  <div class="body">
+    <p>Estimado/a <strong>{{nombre_completo}}</strong>,</p>
+    <p>Su cuenta institucional ha sido creada exitosamente. A continuación encontrará sus credenciales de acceso:</p>
+    <div class="field"><strong>Correo institucional</strong><span>{{email_institucional}}</span></div>
+    <div class="field"><strong>Alias</strong><span>{{alias}}</span></div>
+    <div class="field"><strong>Tipo de cuenta</strong><span>{{tipo}}</span></div>
+    <div class="field"><strong>Cédula</strong><span>{{cedula}}</span></div>
+    <div class="field"><strong>Lote de creación</strong><span>{{lote}}</span></div>
+    <p>Para iniciar sesión ingrese a <a href="https://portal.office.com">portal.office.com</a> con su correo institucional. Se le solicitará cambiar su contraseña en el primer ingreso.</p>
+    <p>Si tiene alguna duda comuníquese con el administrador de sistemas.</p>
+  </div>
+  <div class="footer">Este mensaje fue generado automáticamente. Por favor no responda a este correo.</div>
+</div>
+</body>
+</html>

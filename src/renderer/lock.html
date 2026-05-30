@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<title>m365OnlineTool — Acceso</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0078d4;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  /* Drag area on top */
+  .drag { position: fixed; top: 0; left: 0; right: 0; height: 32px; -webkit-app-region: drag; }
+  .exit-btn {
+    position: fixed; top: 6px; right: 10px;
+    background: transparent; border: none; color: rgba(255,255,255,.7);
+    font-size: 18px; cursor: pointer; -webkit-app-region: no-drag;
+    line-height: 1; padding: 2px 6px;
+  }
+  .exit-btn:hover { color: white; }
+
+  .card {
+    background: white;
+    border-radius: 8px;
+    padding: 36px 40px 32px;
+    width: 340px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 28px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: #0078d4;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 20px; height: 20px; }
+  .logo-text { font-size: 16px; font-weight: 700; color: #201f1e; line-height: 1.2; }
+  .logo-sub  { font-size: 11px; color: #605e5c; }
+
+  h2 { font-size: 17px; font-weight: 600; color: #201f1e; margin-bottom: 6px; }
+  .subtitle { font-size: 12px; color: #605e5c; margin-bottom: 22px; }
+
+  label { font-size: 12px; font-weight: 600; color: #3b3a39; display: block; margin-bottom: 4px; }
+
+  input[type=password] {
+    width: 100%; padding: 8px 12px;
+    border: 1px solid #c8c6c4; border-radius: 3px;
+    font-family: inherit; font-size: 14px;
+    color: #201f1e; background: white; outline: none;
+    margin-bottom: 14px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type=password]:focus { border-color: #0078d4; box-shadow: 0 0 0 1px #0078d4; }
+  input[type=password].error { border-color: #a4262c; box-shadow: 0 0 0 1px #a4262c; }
+
+  .btn {
+    width: 100%; padding: 9px;
+    background: #0078d4; color: white;
+    border: none; border-radius: 3px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 4px;
+    transition: background .12s;
+  }
+  .btn:hover { background: #106ebe; }
+  .btn:active { background: #005a9e; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .msg-error {
+    display: none; padding: 8px 12px;
+    background: #fde7e9; border-left: 3px solid #a4262c;
+    border-radius: 0 3px 3px 0;
+    font-size: 12px; color: #8e1a1f;
+    margin-bottom: 12px;
+  }
+  .msg-error.show { display: block; }
+
+  .hint { font-size: 11px; color: #605e5c; margin-top: 14px; text-align: center; }
+
+  .strength-bar {
+    height: 3px; border-radius: 2px; background: #e1dfdd;
+    margin-bottom: 12px; overflow: hidden;
+  }
+  .strength-fill { height: 100%; width: 0; transition: width .2s, background .2s; }
+</style>
+</head>
+<body>
+<div class="drag"></div>
+<button class="exit-btn" onclick="window.api.lockExit()" title="Salir">✕</button>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 20 20" fill="white"><rect x="1" y="1" width="8" height="8"/><rect x="11" y="1" width="8" height="8"/><rect x="1" y="11" width="8" height="8"/><rect x="11" y="11" width="8" height="8"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">m365OnlineTool</div>
+      <div class="logo-sub">Administrador Microsoft 365</div>
+    </div>
+  </div>
+
+  <!-- UNLOCK view -->
+  <div id="view-unlock">
+    <h2>Iniciar sesión</h2>
+    <p class="subtitle">Ingrese la clave maestra para acceder</p>
+    <div class="msg-error" id="err-unlock">Clave incorrecta. Intente de nuevo.</div>
+    <label for="pw-unlock">Clave maestra</label>
+    <input type="password" id="pw-unlock" placeholder="Ingrese su clave" autofocus
+           onkeydown="if(event.key==='Enter') doUnlock()"/>
+    <button class="btn" onclick="doUnlock()">Acceder</button>
+  </div>
+
+  <!-- INIT view (first time) -->
+  <div id="view-init" style="display:none;">
+    <h2>Configuración inicial</h2>
+    <p class="subtitle">Cree la clave maestra para proteger la configuración</p>
+    <div class="msg-error" id="err-init"></div>
+    <label for="pw-new">Nueva clave maestra</label>
+    <input type="password" id="pw-new" placeholder="Mínimo 6 caracteres"
+           oninput="checkStrength()" onkeydown="if(event.key==='Enter') document.getElementById('pw-confirm').focus()"/>
+    <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+    <label for="pw-confirm">Confirmar clave</label>
+    <input type="password" id="pw-confirm" placeholder="Repita la clave"
+           onkeydown="if(event.key==='Enter') doInit()"/>
+    <button class="btn" id="btn-init" onclick="doInit()">Crear y continuar</button>
+  </div>
+
+  <!-- MIGRATE view (old unencrypted conf detected) -->
+  <div id="view-migrate" style="display:none;">
+    <h2>Actualización requerida</h2>
+    <p class="subtitle">Se encontró una configuración sin cifrar. Defina una clave maestra para protegerla. Se creará una copia de respaldo.</p>
+    <div class="msg-error" id="err-migrate"></div>
+    <label for="pw-mig1">Nueva clave maestra</label>
+    <input type="password" id="pw-mig1" placeholder="Mínimo 6 caracteres"
+           oninput="checkStrengthMig()" onkeydown="if(event.key==='Enter') document.getElementById('pw-mig2').focus()"/>
+    <div class="strength-bar"><div class="strength-fill" id="strength-fill-mig"></div></div>
+    <label for="pw-mig2">Confirmar clave</label>
+    <input type="password" id="pw-mig2" placeholder="Repita la clave"
+           onkeydown="if(event.key==='Enter') doMigrate()"/>
+    <button class="btn" onclick="doMigrate()">Cifrar y continuar</button>
+  </div>
+
+  <p class="hint" id="lock-hint"></p>
+</div>
+
+<script>
+function start() {
+  // El modo se pasa como hash en la URL: #unlock | #new | #migrate
+  const mode = (location.hash || '#unlock').replace('#', '');
+
+  document.getElementById('view-unlock').style.display  = 'none';
+  document.getElementById('view-init').style.display    = 'none';
+  document.getElementById('view-migrate').style.display = 'none';
+
+  if (mode === 'new') {
+    document.getElementById('view-init').style.display   = '';
+    document.getElementById('lock-hint').textContent     = 'Primera ejecución — defina su clave maestra.';
+    document.getElementById('pw-new').focus();
+  } else if (mode === 'migrate') {
+    document.getElementById('view-migrate').style.display = '';
+    document.getElementById('lock-hint').textContent = 'Configuración anterior detectada — se cifrará con su nueva clave.';
+    document.getElementById('pw-mig1').focus();
+  } else {
+    document.getElementById('view-unlock').style.display = '';
+    document.getElementById('lock-hint').textContent = '';
+    document.getElementById('pw-unlock').focus();
+  }
+}
+
+async function doUnlock() {
+  const pw  = document.getElementById('pw-unlock').value;
+  const inp = document.getElementById('pw-unlock');
+  const err = document.getElementById('err-unlock');
+  if (!pw) { inp.classList.add('error'); return; }
+  const result = await window.api.lockTryUnlock(pw);
+  if (result === 'ok') {
+    // main process opens the main window — nothing more needed here
+  } else if (result === 'wrong') {
+    inp.classList.add('error');
+    err.classList.add('show');
+    inp.value = '';
+    inp.focus();
+  } else if (result === 'new') {
+    document.getElementById('view-unlock').style.display  = 'none';
+    document.getElementById('view-init').style.display    = '';
+    document.getElementById('pw-new').focus();
+  } else if (result === 'migrate') {
+    document.getElementById('view-unlock').style.display  = 'none';
+    document.getElementById('view-migrate').style.display = '';
+    document.getElementById('lock-hint').textContent = 'Configuración anterior detectada — se cifrará con su nueva clave.';
+    document.getElementById('pw-mig1').focus();
+  }
+}
+
+async function doInit() {
+  const pw1 = document.getElementById('pw-new').value;
+  const pw2 = document.getElementById('pw-confirm').value;
+  const err = document.getElementById('err-init');
+  err.classList.remove('show');
+  document.getElementById('pw-new').classList.remove('error');
+  document.getElementById('pw-confirm').classList.remove('error');
+
+  if (pw1.length < 6) {
+    err.textContent = 'La clave debe tener al menos 6 caracteres.';
+    err.classList.add('show');
+    document.getElementById('pw-new').classList.add('error');
+    return;
+  }
+  if (pw1 !== pw2) {
+    err.textContent = 'Las claves no coinciden.';
+    err.classList.add('show');
+    document.getElementById('pw-confirm').classList.add('error');
+    document.getElementById('pw-confirm').focus();
+    return;
+  }
+  const res = await window.api.lockInitConf({ password: pw1 });
+  if (!res.ok) {
+    err.textContent = 'Error al crear la configuración: ' + res.error;
+    err.classList.add('show');
+  }
+}
+
+function checkStrength() {
+  const pw  = document.getElementById('pw-new').value;
+  const bar = document.getElementById('strength-fill');
+  let score = 0;
+  if (pw.length >= 6)  score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const pct = (score / 5) * 100;
+  bar.style.width = pct + '%';
+  bar.style.background = score <= 2 ? '#a4262c' : score <= 3 ? '#f59e0b' : '#107c10';
+}
+
+async function doMigrate() {
+  const pw1 = document.getElementById('pw-mig1').value;
+  const pw2 = document.getElementById('pw-mig2').value;
+  const err = document.getElementById('err-migrate');
+  err.classList.remove('show');
+  if (pw1.length < 6) {
+    err.textContent = 'La clave debe tener al menos 6 caracteres.';
+    err.classList.add('show');
+    return;
+  }
+  if (pw1 !== pw2) {
+    err.textContent = 'Las claves no coinciden.';
+    err.classList.add('show');
+    document.getElementById('pw-mig2').focus();
+    return;
+  }
+  const res = await window.api.lockMigrateConf({ password: pw1 });
+  if (!res.ok) {
+    err.textContent = 'Error al cifrar: ' + res.error;
+    err.classList.add('show');
+  }
+}
+
+function checkStrengthMig() {
+  const pw  = document.getElementById('pw-mig1').value;
+  const bar = document.getElementById('strength-fill-mig');
+  let score = 0;
+  if (pw.length >= 6)  score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const pct = (score / 5) * 100;
+  bar.style.width = pct + '%';
+  bar.style.background = score <= 2 ? '#a4262c' : score <= 3 ? '#f59e0b' : '#107c10';
+}
+
+start();
+</script>
+</body>
+</html>
