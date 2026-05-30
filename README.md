@@ -19,15 +19,16 @@
 
 - [Descripción general](#descripción-general)
 - [Características](#características)
-- [Capturas de pantalla](#capturas-de-pantalla)
 - [Requisitos previos](#requisitos-previos)
 - [Instalación y configuración del entorno](#instalación-y-configuración-del-entorno)
 - [Configuración en Azure Active Directory](#configuración-en-azure-active-directory)
 - [Uso de la aplicación](#uso-de-la-aplicación)
+- [Formato del CSV — Acciones masivas](#formato-del-csv--acciones-masivas)
+- [Formato del CSV — Notificaciones](#formato-del-csv--notificaciones)
+- [Plantillas HTML de notificación](#plantillas-html-de-notificación)
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Compilar el instalador](#compilar-el-instalador)
 - [Contribuir](#contribuir)
-- [Código de conducta](#código-de-conducta)
 - [Licencia](#licencia)
 - [Aviso legal](#aviso-legal)
 
@@ -37,73 +38,77 @@
 
 **m365OnlineTool** es una herramienta de código abierto orientada a administradores de TI en instituciones educativas que utilizan **Microsoft 365 Plan A1**. Permite gestionar el ciclo completo de vida de cuentas de usuario directamente desde el escritorio de Windows, sin necesidad de abrir el portal web de Microsoft 365 ni escribir scripts de PowerShell.
 
-La aplicación se comunica con la API de **Microsoft Graph v1.0** mediante un registro de aplicación en Azure Active Directory con autenticación de tipo *client credentials* (sin intervención del usuario final).
+La aplicación se comunica con **Microsoft Graph API v1.0** mediante un registro de aplicación en Azure Active Directory con autenticación de tipo *client credentials*. La configuración se almacena localmente cifrada con **AES-256-CBC**.
 
 ---
 
 ## Características
 
-### Gestión de cuentas
-- **Creación de cuentas** con nomenclatura automática según el tipo de usuario:
-  - Maestros → prefijo `m.` → `m.pgonzalez@escuela.org`
-  - Estudiantes → prefijo `e.` → `e.mgomez@escuela.org`
-  - Otros → inicial del nombre + apellido → `jrodriguez@escuela.org`
-- Normalización automática de caracteres especiales y acentos en el nombre de usuario
-- Vista previa del UPN generado en tiempo real antes de crear la cuenta
-- Contraseña temporal con obligación de cambio en el primer inicio de sesión
+### Seguridad
+- Configuración protegida con **contraseña maestra** y cifrado **AES-256-CBC**
+- Clave derivada con **PBKDF2** (100.000 iteraciones, SHA-256) + salt aleatorio
+- Pantalla de desbloqueo al iniciar con detección de archivo nuevo, existente o sin cifrar (migración automática)
+- Opción para cambiar la contraseña maestra desde la interfaz
 
-### Seguridad y recuperación
-- Registro del **número de teléfono celular** como método de autenticación MFA y recuperación de cuenta
-- El número queda registrado en Microsoft Entra ID como `phoneMethods` para recuperación de acceso
+### Panel
+- Estadísticas del tenant: total de usuarios, activos, inactivos, con licencia
+- Tabla de licencias A1 disponibles con unidades consumidas y disponibles
+- Carga automática al abrir la aplicación (solo la primera vez)
 
-### Licencias
-- Listado de todas las SKUs disponibles en el tenant con unidades consumidas y disponibles
-- Asignación de licencia A1 al momento de crear la cuenta o en cualquier momento posterior desde la vista de usuarios
+### Nueva Cuenta
+- Generación automática de UPN con **3 métodos en cascada** que verifican disponibilidad en Exchange Online:
+  - Método 1: `prefijo.L1Apellido1` → `m.jdoe@escuela.org`
+  - Método 2: `prefijo.L1L2Apellido1` → `m.jmdoe@escuela.org` (si hay ≥ 2 nombres)
+  - Método 3: `prefijo.L1Apellido1L2Apellido2` → `m.jdoes@escuela.org` (si hay ≥ 2 apellidos)
+  - Fallback con sufijo numérico incremental
+- Prefijos automáticos por tipo: `m.` maestros, `e.` estudiantes, sin prefijo para otros
+- Validación de nombre completo y correo institucional antes de crear (bloquea duplicados)
+- Contraseña temporal aleatoria con parámetros configurables
+- Teléfono celular como método MFA (autenticación SMS)
+- Asignación automática de licencia según el tipo configurado
+- `JobTitle` automático: `DOCENTE`, `ESTUDIANTE` u `OTRO`
+- Nombres y apellidos guardados en **mayúsculas**
+- Campos organizacionales desde la configuración (ciudad, país, dirección, etc.)
+- `CustomAttribute1` = ID de lote (`LT-AAMMDD:HHmmss-xxxxxxxxx`)
+- `CustomAttribute2` = Cédula
+- `CustomAttribute3` = Correo personal
 
-### Administración de usuarios
-- Lista completa de usuarios del tenant con búsqueda en tiempo real
-- Filtro por tipo (maestros, estudiantes, otros) y por estado (activo / inactivo)
-- **Activar o inactivar** cuentas con un solo clic (bloqueo/desbloqueo de inicio de sesión)
-- Edición rápida de teléfono y licencia desde un diálogo contextual
+### Usuarios
+- Lista completa con paginación automática (sin límite de registros)
+- Filtros por columna en tiempo real: nombre, UPN, tipo, teléfono, licencia, estado, fecha, atributos
+- Ordenamiento ascendente/descendente por cualquier columna
+- Columnas: nombre, UPN, tipo, teléfono, licencia, estado, fecha de creación, Lote (CA1), Cédula (CA2), Correo personal (CA3)
+- Activar o inactivar cuentas
+- Editar teléfono y asignar licencia
+- Eliminar cuentas con **token de confirmación aleatorio** de 8 caracteres
+- Exportar lista filtrada a `.csv`
 
-
-### Importación masiva desde CSV
-- Soporta cuatro acciones en un mismo archivo: **crear**, **editar**, **desactivar** y **activar**
-- Generación automática de UPN según el tipo al usar la acción `crear`
+### Acciones masivas (CSV)
+- Importación de usuarios desde archivo `.csv` con cinco acciones: `crear`, `editar`, `desactivar`, `activar`, `eliminar`
+- Eliminaciones masivas requieren token de confirmación
 - Vista previa de todas las filas antes de procesar
-- Tabla de resultados por fila con estado (éxito / error) y detalle del error
-- Soporte de arrastrar y soltar el archivo directamente en la interfaz
-- Descarga de plantilla `.csv` de ejemplo desde la misma pantalla
-- Licencia A1 predeterminada aplicable a todas las cuentas nuevas del lote
-- El archivo acepta BOM UTF-8 (compatible con Excel en español)
+- Tabla de resultados con 15 columnas por fila
+- Exportación de resultados a `.csv`
 
-### Registro de actividad
-- Log persistente de todas las operaciones realizadas (creación, activación, desactivación, cambio de teléfono, asignación de licencia)
-- Cada entrada incluye fecha y hora ISO 8601, tipo de operación, UPN afectado y detalles
-- Descarga del log como archivo `.txt` desde la interfaz
+### Notificaciones
+- Envío de correos desde plantillas HTML a destinatarios de un `.csv`
+- Variables en plantillas con formato `{{variable}}`, `{variable}` o `[variable]`
+- Indicador de progreso durante el envío (`Enviando correo N de M`)
+- Tabla de destinatarios con búsqueda en tiempo real
+- Resultados del envío exportables a `.csv`
+
+### Registro de Actividad
+- Log persistente de todas las operaciones con fecha/hora ISO 8601
 - Coloreado por tipo de operación en el visor integrado
+- Descarga como archivo `.txt`
 
-### Interfaz gráfica
-- Diseño fiel a **Fluent UI** (sistema de diseño de Microsoft 365): colores, tipografía, controles y espaciado
-- Barra de título personalizada con controles de ventana nativos
-- Navegación lateral tipo NavigationView con indicador de sección activa
-- CommandBar contextual por cada vista
-- MessageBar para notificaciones de éxito y error
-- Sin emojis ni íconos de terceros — solo SVG geométricos puros
-
----
-
-## Capturas de pantalla
-
-> Las capturas se generan al compilar y ejecutar la aplicación en su entorno local.
-
-| Vista | Descripción |
-|---|---|
-| Panel | Estadísticas del tenant y estado de licencias A1 |
-| Nueva Cuenta | Formulario con selección de tipo y vista previa del UPN |
-| Usuarios | Tabla filtrable con acciones por fila |
-| Registro | Consola de actividad con descarga |
-| Configuración | Credenciales de Azure y prueba de conexión |
+### Configuración
+- **Conexión API**: Tenant ID, Client ID, Client Secret, Dominio predeterminado + probar conexión
+- **Organización**: Datos que se asignan a cada cuenta nueva (ciudad, país, dirección, prefijo telefónico, etc.)
+- **Licencias**: SKU predeterminado por tipo de cuenta + parámetros de contraseña aleatoria
+- **Correo saliente**: Servidor SMTP, puerto, usuario + probar conexión SMTP
+- **Contraseña maestra**: Cambio de clave con verificación y medidor de fortaleza
+- **Acerca de**: Versión, API, ruta de configuración
 
 ---
 
@@ -135,15 +140,11 @@ git clone https://github.com/tu-usuario/m365OnlineTool.git
 cd m365OnlineTool
 ```
 
-O si descargaste el ZIP, descomprímelo y abre la carpeta en la terminal.
-
 ### 2. Instalar dependencias
 
 ```bash
 npm install
 ```
-
-Este comando descarga Electron, las librerías de Microsoft Graph y todas las dependencias declaradas en `package.json`. La primera ejecución puede tardar entre 3 y 8 minutos según la velocidad de la conexión.
 
 ### 3. Ejecutar en modo desarrollo
 
@@ -151,121 +152,127 @@ Este comando descarga Electron, las librerías de Microsoft Graph y todas las de
 npm start
 ```
 
-La ventana de la aplicación se abrirá. Para inspeccionar errores del proceso de interfaz, presiona **Ctrl + Shift + I** dentro de la app para abrir las DevTools de Chromium.
-
-Los errores del proceso principal (Node.js / Electron) aparecen directamente en la terminal de VS Code.
-
-### 4. Extensiones recomendadas para VS Code
-
-Instálalas desde el panel de extensiones (**Ctrl + Shift + X**):
-
-- `dbaeumer.vscode-eslint` — análisis estático de JavaScript
-- `esbenp.prettier-vscode` — formateo automático de código
-- `formulahendry.auto-rename-tag` — útil al editar el HTML del renderer
+Al iniciar por primera vez se muestra la pantalla de configuración inicial para crear la contraseña maestra. Los datos se cifran con AES-256-CBC antes de guardarse en `m365OnlineTool.conf`.
 
 ---
 
 ## Configuración en Azure Active Directory
 
-Este paso es necesario para que la aplicación pueda comunicarse con Microsoft Graph API.
-
 ### Paso 1 — Registrar la aplicación
 
-1. Inicia sesión en https://portal.azure.com con una cuenta de administrador global
-2. Busca y abre **Azure Active Directory** (o **Microsoft Entra ID**)
-3. En el menú lateral selecciona **Registros de aplicaciones**
-4. Haz clic en **Nueva registración**
-5. Completa el formulario:
-   - **Nombre:** `m365OnlineTool`
-   - **Tipos de cuenta admitidos:** Solo las cuentas de este directorio organizativo
-   - **URI de redireccionamiento:** dejar vacío
-6. Haz clic en **Registrar**
+1. Inicia sesión en https://portal.azure.com
+2. Ve a **Azure Active Directory → Registros de aplicaciones → Nueva registración**
+3. Nombre: `m365OnlineTool` | Tipo: solo este directorio | Sin URI de redireccionamiento
+4. Haz clic en **Registrar**
 
 ### Paso 2 — Copiar las credenciales
 
-En la página de la aplicación recién creada encontrarás:
+- **Id. de directorio (inquilino)** → Tenant ID
+- **Id. de aplicación (cliente)** → Client ID
 
-- **Id. de directorio (inquilino)** → es el **Tenant ID**
-- **Id. de aplicación (cliente)** → es el **Client ID**
+### Paso 3 — Crear el secreto
 
-Copia ambos valores y guárdalos temporalmente.
+Ve a **Certificados y secretos → Nuevo secreto de cliente**. Copia el **Valor** inmediatamente (solo se muestra una vez).
 
-### Paso 3 — Crear el secreto de cliente
+### Paso 4 — Asignar permisos
 
-1. En el menú lateral de la app ve a **Certificados y secretos**
-2. Haz clic en **Nuevo secreto de cliente**
-3. Descripción: `m365OnlineTool-Secret`, expiración: **24 meses**
-4. Haz clic en **Agregar**
-5. **Copia el campo Valor inmediatamente** — solo se muestra una vez. Si lo pierdes deberás crear uno nuevo.
-
-### Paso 4 — Asignar permisos de Microsoft Graph
-
-1. En el menú lateral ve a **Permisos de API**
-2. Haz clic en **Agregar un permiso → Microsoft Graph → Permisos de aplicación**
-3. Busca y selecciona los siguientes permisos:
+Ve a **Permisos de API → Agregar permiso → Microsoft Graph → Permisos de aplicación** y agrega:
 
 | Permiso | Motivo |
 |---|---|
 | `User.ReadWrite.All` | Crear, leer y modificar usuarios |
-| `Directory.ReadWrite.All` | Leer y modificar directorio (necesario para asignar licencias) |
-| `UserAuthenticationMethod.ReadWrite.All` | Registrar el teléfono como método de autenticación MFA |
+| `Directory.ReadWrite.All` | Asignar licencias |
+| `UserAuthenticationMethod.ReadWrite.All` | Registrar teléfono para MFA |
 
-4. Haz clic en **Agregar permisos**
-5. Haz clic en el botón **Conceder consentimiento de administrador para [nombre del tenant]** y confirma
+Haz clic en **Conceder consentimiento de administrador**.
 
-Los tres permisos deben mostrar una palomita verde en la columna de estado.
+### Paso 5 — Ingresar credenciales en la app
 
-### Paso 5 — Ingresar credenciales en la aplicación
-
-1. Abre la app con `npm start`
-2. Ve a la sección **Configuración** en el menú lateral
-3. Ingresa:
-   - **ID de directorio (Tenant ID)**
-   - **ID de aplicación (Client ID)**
-   - **Secreto de cliente**
-   - **Dominio predeterminado** (ej: `miescuela.org`)
-4. Haz clic en **Guardar configuración**
-5. Haz clic en **Probar conexión** — el indicador en la barra lateral debe volverse verde
+Ve a **Configuración → Conexión API**, ingresa los datos y haz clic en **Probar conexión Graph API**.
 
 ---
 
 ## Uso de la aplicación
 
-### Crear una cuenta nueva
+### Crear una cuenta
 
-1. Ve a **Nueva Cuenta** en el menú lateral
-2. Selecciona el tipo: **Maestro**, **Estudiante** u **Otro**
-3. Ingresa el primer nombre y el apellido — el UPN se genera automáticamente en tiempo real
-4. Ingresa el dominio si no está precargado desde la configuración
-5. (Opcional) Ingresa el teléfono celular para recuperación de cuenta
-6. Selecciona una licencia A1 de la lista desplegable
-7. Haz clic en **Crear cuenta**
+1. Ve a **Nueva Cuenta**
+2. Selecciona el tipo (Maestro / Estudiante / Otro)
+3. Ingresa nombres, apellidos, teléfono, cédula y correo personal
+4. El correo institucional se genera automáticamente
+5. Haz clic en **Crear cuenta**
 
-El sistema normalizará automáticamente los acentos y caracteres especiales del nombre al generar el UPN.
+### Acciones masivas
 
-### Activar o inactivar una cuenta
+1. Ve a **Acciones masivas**
+2. Descarga la plantilla CSV con **Descargar plantilla**
+3. Completa el CSV con las acciones requeridas
+4. Selecciona el archivo y haz clic en **Procesar importación**
 
-1. Ve a **Usuarios**
-2. Localiza al usuario usando la búsqueda o los filtros
-3. Haz clic en **Activar** o **Desactivar** en la columna de acciones
+Para acciones de eliminación se solicita un token de confirmación aleatorio de 8 caracteres.
 
-### Editar teléfono o asignar licencia a cuenta existente
+### Notificaciones
 
-1. Ve a **Usuarios**
-2. Haz clic en **Editar** en la fila del usuario
-3. Modifica el teléfono y/o selecciona una nueva licencia
-4. Haz clic en **Guardar cambios**
+1. Ve a **Notificaciones**
+2. Configura las credenciales SMTP en **Configuración → Correo saliente**
+3. Selecciona una plantilla HTML de la carpeta `plantillas/`
+4. Carga el CSV de destinatarios
+5. Ingresa la contraseña del remitente y haz clic en **Enviar notificaciones**
 
-### Descargar el registro de actividad
+---
 
-1. Ve a **Registro de Actividad**
-2. Haz clic en **Descargar registro**
-3. Selecciona la ubicación y nombre del archivo `.txt`
+## Formato del CSV — Acciones masivas
 
-El archivo de log también se encuentra en:
+| Columna | Acciones que la usan | Descripción |
+|---|---|---|
+| `accion` | todas | `crear` / `editar` / `desactivar` / `activar` / `eliminar` |
+| `tipo` | `crear` | `maestro` / `estudiante` / `otro` |
+| `nombres` | `crear` | Nombres completos |
+| `apellidos` | `crear` | Apellidos completos |
+| `telefono` | `crear`, `editar` | Celular con prefijo (ej: `+57 3001234567`) |
+| `cuenta_institucional` | `editar`, `desactivar`, `activar`, `eliminar` | UPN de la cuenta |
+| `cedula` | `crear`, `editar` | Número de cédula → `CustomAttribute2` |
+| `mailpersonal` | `crear`, `editar` | Correo personal → `CustomAttribute3` |
+| `observacion` | todas | Nota libre visible en resultados y log |
+
+El dominio, la contraseña y el SKU de licencia se toman automáticamente de la Configuración.
+
+---
+
+## Formato del CSV — Notificaciones
+
 ```
-C:\Users\[usuario]\AppData\Roaming\m365OnlineTool\activity.log
+lote,cedula,nombres,apellidos,email_personal,alias,celular,estado,
+email_institucional,nombre_completo,tipo,id,creado,estado_cuenta,observacion
 ```
+
+Este formato corresponde exactamente al CSV exportado desde la sección **Resultados de la importación** en Acciones masivas.
+
+---
+
+## Plantillas HTML de notificación
+
+Las plantillas se guardan en la carpeta `plantillas/` al mismo nivel que el ejecutable. Las variables se insertan con cualquiera de estos formatos:
+
+```
+{{variable}}   {variable}   [variable]
+```
+
+Variables disponibles:
+
+| Variable | Descripción |
+|---|---|
+| `{{nombre_completo}}` | Nombre completo del destinatario |
+| `{{email_institucional}}` | Correo institucional |
+| `{{email_personal}}` | Correo personal |
+| `{{alias}}` | Alias (parte del UPN antes del @) |
+| `{{cedula}}` | Número de cédula |
+| `{{celular}}` | Teléfono celular |
+| `{{tipo}}` | DOCENTE / ESTUDIANTE / OTRO |
+| `{{lote}}` | ID de lote de creación |
+| `{{creado}}` | Fecha de creación |
+| `{{estado_cuenta}}` | Activa / Inactiva |
+| `{{observacion}}` | Observación del CSV |
 
 ---
 
@@ -273,25 +280,31 @@ C:\Users\[usuario]\AppData\Roaming\m365OnlineTool\activity.log
 
 ```
 m365OnlineTool/
-│
 ├── src/
 │   ├── main/
-│   │   ├── main.js          # Proceso principal de Electron
-│   │   │                    # Maneja ventana, IPC, Graph API, log
-│   │   └── preload.js       # Puente seguro entre renderer y Node.js
-│   │                        # (contextIsolation habilitado)
-│   │
+│   │   ├── main.js          ← Proceso principal (Electron + Graph API + cifrado)
+│   │   └── preload.js       ← Puente seguro IPC (contextIsolation)
 │   └── renderer/
-│       └── index.html       # Interfaz gráfica completa (HTML + CSS + JS)
-│                            # Fluent UI, sin frameworks externos
-│
+│       ├── index.html       ← Interfaz principal (Fluent UI)
+│       └── lock.html        ← Pantalla de desbloqueo / primera configuración
+├── plantillas/
+│   └── Bienvenida cuenta institucional.html   ← Plantilla de ejemplo
 ├── resources/
-│   └── icon.ico             # Ícono de la aplicación (256x256)
-│
-├── package.json             # Dependencias, scripts y config de electron-builder
-├── README.md                # Este archivo
-├── LICENSE.md               # Licencia MIT
-└── setup.bat                # Script de instalación para Windows
+│   └── icon.ico             ← Ícono de la aplicación (256x256)
+├── package.json
+├── README.md
+└── LICENSE.md
+```
+
+### Archivo de configuración
+
+```
+m365OnlineTool.conf          ← Al mismo nivel del ejecutable o raíz del proyecto
+```
+
+Formato cifrado:
+```json
+{ "salt": "hex_aleatorio", "data": "iv_hex:datos_aes256_hex" }
 ```
 
 ### Dependencias principales
@@ -301,91 +314,44 @@ m365OnlineTool/
 | `electron` | 28.x | Shell de escritorio para Windows |
 | `@azure/msal-node` | 2.x | Autenticación OAuth2 con Azure AD |
 | `@microsoft/microsoft-graph-client` | 3.x | Cliente oficial de Microsoft Graph |
-| `electron-store` | 8.x | Almacenamiento local cifrado de configuración |
 | `node-fetch` | 2.x | Peticiones HTTP desde el proceso principal |
+| `nodemailer` | 6.x | Envío de correos SMTP |
 | `electron-builder` | 24.x | Compilación del instalador `.exe` |
 
 ---
 
 ## Compilar el instalador
 
-Para generar el instalador `.exe` listo para distribuir:
-
 ```bash
 npm run build
 ```
 
-Antes de compilar, asegúrate de tener el archivo `resources/icon.ico` (256x256 px). Puedes convertir cualquier imagen PNG en https://convertio.co/es/png-ico/.
-
-El proceso tardará entre 5 y 10 minutos. Al finalizar encontrarás:
+Requiere el archivo `resources/icon.ico` (256x256 px). Al finalizar:
 
 ```
 dist/
-├── m365OnlineTool Setup 1.0.0.exe    # Instalador NSIS (recomendado para distribuir)
-└── win-unpacked/                 # Versión portable, sin necesidad de instalar
+├── m365OnlineTool Setup 1.0.0.exe    ← Instalador NSIS
+└── win-unpacked/                      ← Versión portable
 ```
-
-El instalador generado no requiere que Node.js esté instalado en el equipo de destino. Electron incluye su propio runtime de Chromium y Node.js empaquetado.
 
 ---
 
 ## Contribuir
 
-Las contribuciones son bienvenidas. Este proyecto es de código abierto y está hecho para la comunidad educativa.
-
-### Cómo contribuir
-
 1. Haz un **fork** del repositorio
-2. Crea una rama para tu cambio:
-   ```bash
-   git checkout -b funcionalidad/nombre-descriptivo
-   ```
-3. Realiza tus cambios y haz commit con mensajes descriptivos:
-   ```bash
-   git commit -m "feat: agregar soporte para grupos de Microsoft 365"
-   ```
-4. Sube tu rama:
-   ```bash
-   git push origin funcionalidad/nombre-descriptivo
-   ```
-5. Abre un **Pull Request** describiendo el cambio propuesto
+2. Crea una rama: `git checkout -b funcionalidad/nombre-descriptivo`
+3. Realiza tus cambios y haz commit: `git commit -m "feat: descripción"`
+4. Sube tu rama: `git push origin funcionalidad/nombre-descriptivo`
+5. Abre un **Pull Request**
 
-### Convenciones de commits
+**Convenciones de commits:** `feat:` nueva función · `fix:` corrección · `docs:` documentación · `refactor:` reestructuración
 
-Se recomienda el formato [Conventional Commits](https://www.conventionalcommits.org/es/):
-
-| Prefijo | Uso |
-|---|---|
-| `feat:` | Nueva funcionalidad |
-| `fix:` | Corrección de error |
-| `docs:` | Cambios en documentación |
-| `style:` | Cambios de formato sin impacto funcional |
-| `refactor:` | Reestructuración de código sin cambio de comportamiento |
-| `chore:` | Cambios en configuración, dependencias o scripts |
-
-### Reportar errores
-
-Abre un **Issue** en GitHub con:
-- Descripción del problema
-- Pasos para reproducirlo
-- Versión de Windows y de Node.js
-- Mensaje de error completo (si aplica)
-
-### Ideas de mejoras futuras
-
-- Importación masiva de usuarios desde archivo CSV o Excel
+**Ideas de mejoras futuras**
+- Importación masiva desde Excel
 - Restablecimiento de contraseña desde la interfaz
 - Gestión de grupos de Microsoft 365
-- Asignación de roles administrativos
 - Soporte para múltiples tenants
-- Exportación de reporte de usuarios en PDF o Excel
 - Notificaciones de licencias próximas a vencer
-
----
-
-## Código de conducta
-
-Este proyecto adopta el [Contributor Covenant](https://www.contributor-covenant.org/es/version/2/1/code_of_conduct/) como código de conducta. Se espera que todos los participantes mantengan un entorno respetuoso e inclusivo.
 
 ---
 
@@ -393,15 +359,11 @@ Este proyecto adopta el [Contributor Covenant](https://www.contributor-covenant.
 
 Distribuido bajo la licencia **MIT**. Consulta el archivo [LICENSE.md](LICENSE.md) para ver el texto completo.
 
-En resumen: puedes usar, copiar, modificar y distribuir este software libremente, incluso con fines comerciales, siempre que incluyas el aviso de copyright original.
-
 ---
 
 ## Aviso legal
 
 Este proyecto es una herramienta independiente de código abierto y **no está afiliado, patrocinado ni respaldado por Microsoft Corporation**. "Microsoft 365", "Azure", "Fluent UI" y "Microsoft Graph" son marcas registradas de Microsoft Corporation.
-
-El uso de este software implica la aceptación de los términos de servicio de Microsoft 365 y Microsoft Azure aplicables a tu organización.
 
 ---
 
