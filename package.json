@@ -18,7 +18,21 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "files": [
+      "src/**/*",
+      "resources/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "plantillas",
+        "to": "plantillas",
+        "filter": [
+          "**/*.html"
+        ]
+      }
+    ],
+    "extraResources": []
   },
   "dependencies": {
     "@azure/msal-node": "^2.6.0",
@@ -29,7 +43,7 @@
     "nodemailer": "^6.9.13"
   },
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
   }
 }
